@@ -98,6 +98,7 @@
         style="padding:9px 16px;border:0;border-radius:8px;background:var(--open);color:#fff;font-weight:650;cursor:pointer">送出</button>
     </div>
     <div id="addmsg" class="label" style="margin-top:8px"></div>
+    <div id="addstatus" style="margin-top:6px;font-size:.86rem;font-weight:600"></div>
   </div>
 
   <div id="app"></div>
@@ -230,17 +231,69 @@ document.addEventListener("click", e=>{
   if(!e.target.closest("#tip")) tip.classList.remove("show");
 });
 
-// ── 新增追蹤 ──
+// ── 新增追蹤（送出後向 GitHub 公開 API 輪詢近即時狀態；唯讀、免 token）──
 const REPO="tsai200493-Cyrus/tw-discount-dashboard";
+const GHAPI="https://api.github.com/repos/"+REPO;
 (function(){
-  const btn=document.getElementById("addbtn"), inp=document.getElementById("newcode"), msg=document.getElementById("addmsg");
+  const btn=document.getElementById("addbtn"), inp=document.getElementById("newcode"),
+        msg=document.getElementById("addmsg"), stat=document.getElementById("addstatus");
+  let watch=null;  // {code, since, timer, tries}
+  const setStat=(html,color)=>{ stat.style.color=color||"var(--muted)"; stat.innerHTML=html; };
+  function stopWatch(){ if(watch&&watch.timer) clearInterval(watch.timer); watch=null; }
+
+  async function poll(){
+    if(!watch) return;
+    if(++watch.tries>28){ setStat("（等太久了，改到 GitHub 那張單看狀態；股票仍會自動加入、資料照常更新）"); stopWatch(); return; }
+    let issues;
+    try{
+      const r=await fetch(GHAPI+"/issues?state=all&sort=created&direction=desc&per_page=15",
+                          {headers:{Accept:"application/vnd.github+json"}});
+      if(r.status===403){ setStat("（GitHub 查詢額度暫時用完，稍後會自動恢復；股票仍會加入）"); stopWatch(); return; }
+      issues=await r.json();
+    }catch(_){ return; }               // 網路暫斷，下一輪再試
+    if(!Array.isArray(issues)) return;
+    const want="[add] "+watch.code;
+    const hit=issues.find(it=> it.title && it.title.trim()===want
+                            && new Date(it.created_at).getTime() >= watch.since-60000);
+    if(!hit){ setStat("⏳ 等你在 GitHub 那頁按下綠色 <b>Submit new issue</b>…"); return; }
+    if(hit.state==="open"){ setStat("⏳ 已收到 <b>#"+hit.number+"</b>，機器人驗證＋加入中…"); return; }
+    // 已關閉 → 讀機器人的回覆留言
+    let body="";
+    try{
+      const c=await fetch(GHAPI+"/issues/"+hit.number+"/comments?per_page=10",
+                          {headers:{Accept:"application/vnd.github+json"}});
+      const cs=await c.json();
+      if(Array.isArray(cs)&&cs.length) body=(cs[cs.length-1].body||"").trim();
+    }catch(_){}
+    if(!body){ setStat("已處理 <b>#"+hit.number+"</b>，重新整理看結果。"); stopWatch(); return; }
+    const color= body.startsWith("✅")?"var(--open)" : body.startsWith("ℹ️")?"var(--muted)" : "var(--shut)";
+    setStat(body,color);
+    const added=body.startsWith("✅"), code=watch.code;
+    stopWatch();
+    if(added) waitForData(code);
+  }
+
+  async function waitForData(code){     // ✅ 之後等 Pages 重佈署，資料一到就自動刷新清單
+    for(let i=0;i<8;i++){
+      await new Promise(r=>setTimeout(r,15000));
+      try{
+        const d=await (await fetch("./data.json?_="+Date.now())).json();
+        if((d.stocks||[]).some(s=>s.code===code)){ render(d); setStat("✅ "+code+" 已出現在下方清單。","var(--open)"); return; }
+      }catch(_){}
+    }
+  }
+
   function go(){
     const v=(inp.value||"").trim();
     if(!/^\d{4,6}[A-Za-z]?$/.test(v)){ msg.innerHTML='<span style="color:var(--shut)">請輸入正確代號（4 位數字，如 2454）。</span>'; return; }
-    const url=`https://github.com/${REPO}/issues/new?title=`+encodeURIComponent("[add] "+v)+
+    const url="https://github.com/"+REPO+"/issues/new?title="+encodeURIComponent("[add] "+v)+
       "&body="+encodeURIComponent("自動新增追蹤 "+v+"，送出後系統會驗證代號並加入清單。");
-    msg.innerHTML='已開好 GitHub 投件頁 → 按綠色 <b>Submit new issue</b> 就好，幾分鐘後網站會多這一檔。';
+    msg.innerHTML='已開好 GitHub 投件頁 → 按綠色 <b>Submit new issue</b>。下面會即時顯示進度：';
     window.open(url,"_blank");
+    stopWatch();
+    watch={code:v, since:Date.now(), timer:setInterval(poll,6000), tries:0};
+    setStat("⏳ 等你在 GitHub 那頁按下綠色 <b>Submit new issue</b>…");
+    poll();
   }
   btn.addEventListener("click",go);
   inp.addEventListener("keydown",e=>{ if(e.key==="Enter") go(); });
