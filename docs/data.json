@@ -1,20 +1,20 @@
 {
-  "generated_at": "2026-09-02T04:23:37+00:00",
+  "generated_at": "2026-09-02T07:10:42+00:00",
   "market": {
-    "score": 10,
+    "score": 13,
     "tag": "貪婪(該收手)",
-    "close": 46949,
-    "bias": 12.8,
-    "dd": -1.7,
-    "vol": 16.7,
-    "date": "2026-09-01",
+    "close": 46165,
+    "bias": 10.6,
+    "dd": -3.3,
+    "vol": 15.6,
+    "date": "2026-09-02",
     "margin_note": "融資餘額 5781 億（2025-07-09 起 +160%）"
   },
   "stocks": [
     {
       "code": "2330",
       "name": "台積電",
-      "price": 2440.0,
+      "price": 2385.0,
       "per": 28.28,
       "percentile": 82,
       "per_min": 12.5,
@@ -23,13 +23,13 @@
       "val_cheap": 18,
       "yoy": 44.7,
       "fund": 99,
-      "composite": 35,
+      "composite": 36,
       "label": "窗口關(貴+貪婪)"
     },
     {
       "code": "6669",
       "name": "緯穎",
-      "price": 7800.0,
+      "price": 2610.0,
       "per": 25.01,
       "percentile": 87,
       "per_min": 9.8,
@@ -38,13 +38,13 @@
       "val_cheap": 13,
       "yoy": 39.2,
       "fund": 92,
-      "composite": 32,
+      "composite": 33,
       "label": "窗口關(貴+貪婪)"
     },
     {
       "code": "2382",
       "name": "廣達",
-      "price": 342.0,
+      "price": 337.0,
       "per": 14.9,
       "percentile": 40,
       "per_min": 8.6,
@@ -53,13 +53,13 @@
       "val_cheap": 60,
       "yoy": 131.3,
       "fund": 100,
-      "composite": 52,
+      "composite": 54,
       "label": "半開(中性)"
     },
     {
       "code": "3231",
       "name": "緯創",
-      "price": 182.0,
+      "price": 185.5,
       "per": 14.46,
       "percentile": 37,
       "per_min": 6.1,
@@ -68,13 +68,13 @@
       "val_cheap": 63,
       "yoy": 60.8,
       "fund": 100,
-      "composite": 54,
+      "composite": 55,
       "label": "半開(中性)"
     },
     {
       "code": "2412",
       "name": "中華電",
-      "price": 136.0,
+      "price": 137.5,
       "per": 26.72,
       "percentile": 66,
       "per_min": 22.6,
@@ -83,7 +83,22 @@
       "val_cheap": 34,
       "yoy": 3.7,
       "fund": 49,
-      "composite": 29,
+      "composite": 30,
+      "label": "窗口關(貴+貪婪)"
+    },
+    {
+      "code": "3037",
+      "name": "欣興",
+      "price": 973.0,
+      "per": 64.65,
+      "percentile": 79,
+      "per_min": 6.4,
+      "per_median": 26.2,
+      "per_max": 213.4,
+      "val_cheap": 21,
+      "yoy": 43.7,
+      "fund": 97,
+      "composite": 37,
       "label": "窗口關(貴+貪婪)"
     }
   ],
