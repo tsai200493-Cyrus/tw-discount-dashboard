@@ -8,8 +8,7 @@
   :root{
     --bg:#f6f6f3; --card:#ffffff; --ink:#1b1c1e; --muted:#6b6f76; --line:#e6e5df;
     --open:#1f9d78; --half:#c9922a; --shut:#b0564a; --dream:#7a7d84;
-    --barbg:#eceae3;
-    --cool:#1f9d78; --hot:#c9662a; /* 溫度：冷=恐慌/機會, 熱=貪婪/該收手 */
+    --barbg:#eceae3; --cool:#1f9d78; --hot:#c9662a;
     --shadow:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
   }
   @media (prefers-color-scheme:dark){
@@ -22,13 +21,15 @@
   body{margin:0;background:var(--bg);color:var(--ink);
     font-family:-apple-system,"Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;
     line-height:1.5;-webkit-text-size-adjust:100%}
-  .wrap{max-width:820px;margin:0 auto;padding:18px 16px 48px}
+  .wrap{max-width:820px;margin:0 auto;padding:18px 16px 96px}
   h1{font-size:1.35rem;margin:.2em 0 .1em}
-  .sub{color:var(--muted);font-size:.82rem;margin-bottom:16px}
+  .sub{color:var(--muted);font-size:.82rem;margin-bottom:6px}
+  .hint{color:var(--muted);font-size:.76rem;margin-bottom:16px}
   .card{background:var(--card);border:1px solid var(--line);border-radius:14px;
     padding:16px;margin-bottom:14px;box-shadow:var(--shadow)}
   .label{font-size:.75rem;color:var(--muted);letter-spacing:.02em}
-  /* 市場溫度計 */
+  .term{border-bottom:1px dashed currentColor;cursor:pointer;padding-bottom:1px}
+  .term::after{content:"ⓘ";font-size:.7em;vertical-align:super;opacity:.55;margin-left:1px}
   .mkt-score{font-size:2.6rem;font-weight:700;line-height:1}
   .mkt-tag{font-size:.95rem;font-weight:600;margin-left:8px}
   .thermo{height:14px;border-radius:8px;margin:14px 0 6px;position:relative;
@@ -38,7 +39,6 @@
   .scale{display:flex;justify-content:space-between;font-size:.72rem;color:var(--muted)}
   .stats{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:12px;font-size:.82rem}
   .stats b{font-variant-numeric:tabular-nums}
-  /* 個股 */
   .stock{display:grid;grid-template-columns:1fr auto;gap:6px 12px;align-items:center}
   .stock .name{font-size:1.05rem;font-weight:650}
   .stock .code{color:var(--muted);font-size:.8rem;font-weight:400;margin-left:6px}
@@ -56,36 +56,59 @@
   details li{margin:.3em 0}
   .foot{color:var(--muted);font-size:.76rem;margin-top:18px;line-height:1.6}
   .err{color:var(--shut);font-weight:600}
+  /* 點名詞跳出的白話解釋（底部浮層） */
+  #tip{position:fixed;left:12px;right:12px;bottom:12px;max-width:796px;margin:0 auto;
+    background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;
+    box-shadow:0 6px 24px rgba(0,0,0,.18);display:none;z-index:50;font-size:.9rem;line-height:1.55}
+  #tip.show{display:block}
+  #tip .k{font-weight:700;margin-bottom:4px}
+  #tip .x{float:right;color:var(--muted);font-size:.8rem}
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>打折窗口溫度計</h1>
   <div class="sub" id="sub">載入中…</div>
+  <div class="hint">💡 有虛線的名詞（如 <span class="term" data-k="composite">綜合窗口</span>）點一下會跳出白話解釋。</div>
   <div id="app"></div>
 
   <details>
-    <summary>欄位怎麼看（白話）</summary>
-    <ul>
-      <li><b>市場恐慌度</b>：全大盤共用。高＝大家在恐慌（折扣容易出現）；低＝大家貪婪、追高危險。</li>
-      <li><b>估值便宜度</b>：這檔本益比站在自己歷史的低位＝分數高＝相對它自己便宜。</li>
-      <li><b>營收 YoY</b>：最新月營收年增，成長＝確認「便宜是真折扣，不是衰退陷阱」。</li>
-      <li><b>綜合窗口</b>：0.40×估值便宜 ＋ 0.25×基本面 ＋ 0.35×市場恐慌。<br>
-        ≥65 窗口開（便宜＋恐慌，適合備子彈）｜45–64 半開｜&lt;45 窗口關（貴＋貪婪，別追、該收手）。</li>
-      <li>PER 小圓點：本益比落在它自己 5 年區間（左＝便宜端，右＝昂貴端）的位置。</li>
-    </ul>
+    <summary>全部欄位一次看（白話）</summary>
+    <ul id="glosslist"></ul>
   </details>
 
   <div class="foot" id="foot"></div>
 </div>
+<div id="tip"></div>
 
 <script>
+const GLOSSARY = {
+  market:"市場恐慌度：全大盤共用。高＝大家在恐慌（折扣容易出現）；低＝大家貪婪、追高危險。用大盤乖離／回檔／波動算，不用位階（多頭趨勢會失真）。",
+  composite:"綜合窗口：0.40×估值便宜 ＋ 0.25×基本面 ＋ 0.35×市場恐慌。≥65 窗口開（便宜＋恐慌）｜45–64 半開｜<45 窗口關（貴＋貪婪）。這是情境傾向，不是買賣訊號。",
+  val_cheap:"估值便宜度：這檔的本益比，站在它自己過去 5 年的高低位置。越低（越接近自己的便宜區）分數越高（＝100 − 本益比位階）。回答「相對它自己，現在便宜還貴」。",
+  fund:"基本面：公司賺不賺錢、在成長還衰退。用最新月營收年增率（YoY）換算，成長越猛分數越高。作用是確認「便宜是真折扣，不是公司在爛掉」。",
+  per:"PER（本益比）：股價 ÷ 每股盈餘。買一塊錢的獲利要付幾塊，數字越大＝買得越貴。",
+  pctl:"位階：現在的本益比，站在它自己過去 5 年由低到高的第幾個百分點。越低＝越接近它自己的便宜區。",
+  yoy:"營收YoY：最新月營收的年增率（跟去年同月比）。正＝成長，負＝衰退。",
+};
 const COOL="#1f9d78", HOT="#c9662a";
+const term=(k,t)=>`<span class="term" data-k="${k}">${t}</span>`;
 function compColor(s){ return s>=65?"var(--open)": s>=45?"var(--half)": "var(--shut)"; }
 function mktColor(s){ return s>=65?COOL : s>=40?"#c9922a" : HOT; }
 function esc(x){ return x==null?"—":x; }
 
-fetch("./data.json?_="+Date.now()).then(r=>r.json()).then(render).catch(e=>{
+// 點名詞 → 底部浮層解釋；點別處關閉
+document.addEventListener("click",e=>{
+  const t=e.target.closest(".term"), tip=document.getElementById("tip");
+  if(t && GLOSSARY[t.dataset.k]){
+    tip.innerHTML='<span class="x">點任意處關閉 ✕</span><div class="k">'+t.textContent.replace("ⓘ","")+'</div>'+GLOSSARY[t.dataset.k];
+    tip.classList.add("show"); e.stopPropagation();
+  }else if(!e.target.closest("#tip")){
+    tip.classList.remove("show");
+  }
+});
+
+fetch("./data.json?_="+Date.now()).then(r=>r.json()).then(render).catch(()=>{
   document.getElementById("sub").innerHTML =
     '<span class="err">讀取 data.json 失敗</span>（本機請用 http 開啟，或等 GitHub Pages 上線）';
 });
@@ -100,7 +123,7 @@ function render(d){
   const markPct = Math.max(2,Math.min(98, m.score??50));
   app.innerHTML = `
     <div class="card">
-      <div class="label">市場恐慌度（TAIEX）</div>
+      <div class="label">${term('market','市場恐慌度')}（TAIEX）</div>
       <div><span class="mkt-score" style="color:${mktColor(m.score)}">${esc(m.score)}</span>
         <span class="mkt-tag" style="color:${mktColor(m.score)}">${esc(m.tag)}</span>
         <span class="label"> / 100</span></div>
@@ -125,13 +148,13 @@ function render(d){
         <div><span class="name">${s.name||""}</span><span class="code">${s.code}</span></div>
         <div class="comp" style="color:${compColor(s.composite)}">${s.composite}</div>
         <div><span class="pill" style="background:${compColor(s.composite)}">${s.label}</span></div>
-        <div class="comp label" style="font-size:.72rem;font-weight:500;color:var(--muted)">綜合窗口/100</div>
+        <div class="label" style="text-align:right">${term('composite','綜合窗口')}/100</div>
         <div class="metrics">
           <span>現價 <b>${esc(s.price)}</b></span>
-          <span>PER <b>${esc(s.per)}</b>（位階 <b>${esc(s.percentile)}%</b>）</span>
-          <span>估值便宜度 <b>${esc(s.val_cheap)}</b></span>
-          <span>營收YoY <b>${s.yoy>0?"+":""}${esc(s.yoy)}%</b></span>
-          <span>基本面 <b>${esc(s.fund)}</b></span>
+          <span>${term('per','PER')} <b>${esc(s.per)}</b>（${term('pctl','位階')} <b>${esc(s.percentile)}%</b>）</span>
+          <span>${term('val_cheap','估值便宜度')} <b>${esc(s.val_cheap)}</b></span>
+          <span>${term('yoy','營收YoY')} <b>${s.yoy>0?"+":""}${esc(s.yoy)}%</b></span>
+          <span>${term('fund','基本面')} <b>${esc(s.fund)}</b></span>
         </div>
         <div class="perbar"><div class="dot" style="left:${Math.max(3,Math.min(97,pos))}%"></div></div>
       </div>`);
@@ -144,6 +167,9 @@ function render(d){
         <div class="metrics" style="grid-column:1/-1">${s.label} — 無本益比可評分，屬新藥/夢股，請用賭注 size 對待。</div>
       </div>`);
   }
+
+  const gl=document.getElementById("glosslist");
+  gl.innerHTML = Object.values(GLOSSARY).map(v=>"<li>"+v+"</li>").join("");
 
   const w=d.weights||{};
   document.getElementById("foot").innerHTML =
