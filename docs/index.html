@@ -146,7 +146,7 @@
 <div id="mkchart">
   <div class="chead"><b>市場恐慌度 · 歷史（TAIEX）</b><span class="cx">✕</span></div>
   <div class="cbtns">
-    <button data-mv="fear">恐慌度</button><button data-mv="index">大盤指數</button>
+    <button data-mv="fear">恐慌度</button><button data-mv="index">大盤指數</button><button data-mv="both">疊圖</button>
     <span class="csp"></span>
     <button data-mr="125">6月</button><button data-mr="250">1年</button><button data-mr="500">2年</button>
   </div>
@@ -284,35 +284,39 @@ function mkDraw(){
   const s=MK.series.slice(-MK.range), n=s.length; MK._n=n;
   if(MK.focus==null) MK.focus=n-1;
   MK.focus=Math.max(0,Math.min(n-1,MK.focus));
-  const isFear=MK.view==="fear";
+  const mode=MK.view;                       // fear | index | both
+  const showFear=mode!=="index", showIndex=mode!=="fear", showBands=mode!=="index";
   const W=340,H=172,padL=30,padR=10,padT=10,padB=22, iw=W-padL-padR, ih=H-padT-padB;
-  let maxV,minV;
-  if(isFear){ maxV=100; minV=0; }
-  else{ const cs=s.map(d=>d.close); maxV=Math.max(...cs); minV=Math.min(...cs); const p=(maxV-minV)*0.05||1; maxV+=p; minV-=p; }
-  const span=(maxV-minV)||1, step= n>1? iw/(n-1) : iw;
-  const X=j=> padL+j*step, Y=v=> padT+(maxV-v)/span*ih;
+  const cs=s.map(d=>d.close);
+  const imin0=Math.min(...cs), imax0=Math.max(...cs), ip=(imax0-imin0)*0.05||1;
+  const imin=imin0-ip, imax=imax0+ip;
+  const step= n>1? iw/(n-1) : iw, X=j=> padL+j*step;
+  const Yf=v=> padT+(100-v)/100*ih;                 // 恐慌度 0~100（左）
+  const Yi=v=> padT+(imax-v)/((imax-imin)||1)*ih;   // 大盤點數（右）
 
   let bg="";
-  if(isFear){
+  if(showBands){
     [[65,100,"var(--open)"],[40,65,"var(--half)"],[0,40,"var(--hot)"]].forEach(z=>{
-      const yt=Y(z[1]), yb=Y(z[0]);
+      const yt=Yf(z[1]), yb=Yf(z[0]);
       bg+=`<rect x="${padL}" y="${yt.toFixed(1)}" width="${iw}" height="${(yb-yt).toFixed(1)}" fill="${z[2]}" opacity=".10"/>`;
     });
-    [65,40].forEach(t=>{ const yy=Y(t);
+    [65,40].forEach(t=>{ const yy=Yf(t);
       bg+=`<line x1="${padL}" y1="${yy.toFixed(1)}" x2="${W-padR}" y2="${yy.toFixed(1)}" stroke="var(--line)" stroke-width=".6"/>`;
       bg+=`<text x="${padL-4}" y="${(yy+2.6).toFixed(1)}" font-size="7.5" fill="var(--muted)" text-anchor="end">${t}</text>`;
     });
   } else {
-    [maxV,minV].forEach(t=>{ const yy=Y(t);
+    [imax0,imin0].forEach(t=>{ const yy=Yi(t);
       bg+=`<line x1="${padL}" y1="${yy.toFixed(1)}" x2="${W-padR}" y2="${yy.toFixed(1)}" stroke="var(--line)" stroke-width=".6"/>`;
       bg+=`<text x="${padL-4}" y="${(yy+2.6).toFixed(1)}" font-size="7.5" fill="var(--muted)" text-anchor="end">${Math.round(t)}</text>`;
     });
   }
 
-  let pts="";
-  s.forEach((d,j)=>{ pts+=`${X(j).toFixed(1)},${Y(isFear?d.score:d.close).toFixed(1)} `; });
-  const lineCol=isFear?"var(--ink)":"var(--cool)";
-  const poly=`<polyline points="${pts.trim()}" fill="none" stroke="${lineCol}" stroke-width="1.4"/>`;
+  // 折線（疊圖時大盤在下、恐慌度在上）
+  let lines="";
+  if(showIndex){ let p=""; s.forEach((d,j)=> p+=`${X(j).toFixed(1)},${Yi(d.close).toFixed(1)} `);
+    lines+=`<polyline points="${p.trim()}" fill="none" stroke="var(--cool)" stroke-width="1.4" opacity="${mode==="both"?".85":"1"}"/>`; }
+  if(showFear){ let p=""; s.forEach((d,j)=> p+=`${X(j).toFixed(1)},${Yf(d.score).toFixed(1)} `);
+    lines+=`<polyline points="${p.trim()}" fill="none" stroke="var(--ink)" stroke-width="1.4"/>`; }
 
   let marks="";
   s.forEach((d,j)=>{
@@ -322,21 +326,29 @@ function mkDraw(){
   marks+=`<text x="${padL}" y="${H-6}" font-size="7.5" fill="var(--muted)">${s[0].date.slice(0,7)}</text>`;
   marks+=`<text x="${W-padR}" y="${H-6}" font-size="7.5" fill="var(--muted)" text-anchor="end">${s[n-1].date.slice(0,7)}</text>`;
 
-  const f=s[MK.focus], fx=X(MK.focus), fy=Y(isFear?f.score:f.close);
-  const foc=`<line x1="${fx.toFixed(1)}" y1="${padT}" x2="${fx.toFixed(1)}" y2="${(padT+ih).toFixed(1)}" stroke="var(--muted)" stroke-width=".7"/>`+
-            `<circle cx="${fx.toFixed(1)}" cy="${fy.toFixed(1)}" r="2.6" fill="${lineCol}"/>`;
+  const f=s[MK.focus], fx=X(MK.focus);
+  let foc=`<line x1="${fx.toFixed(1)}" y1="${padT}" x2="${fx.toFixed(1)}" y2="${(padT+ih).toFixed(1)}" stroke="var(--muted)" stroke-width=".7"/>`;
+  if(showIndex) foc+=`<circle cx="${fx.toFixed(1)}" cy="${Yi(f.close).toFixed(1)}" r="2.6" fill="var(--cool)"/>`;
+  if(showFear) foc+=`<circle cx="${fx.toFixed(1)}" cy="${Yf(f.score).toFixed(1)}" r="2.6" fill="var(--ink)"/>`;
   const hit=`<rect class="mkhit" x="${padL}" y="${padT}" width="${iw}" height="${ih}" fill="transparent" style="cursor:pointer"/>`;
-  const svg=`<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">${bg}${poly}${marks}${foc}${hit}</svg>`;
+  const svg=`<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">${bg}${lines}${marks}${foc}${hit}</svg>`;
 
   const tag= f.score>=65?"恐慌(機會)": f.score>=40?"中性":"貪婪(該收手)";
-  const read= isFear
-    ? `<div class="cread"><b>${f.date}</b>　恐慌度 <b>${f.score}</b>　·　${tag}　·　乖離 <b>${f.bias>0?"+":""}${Math.round(f.bias*10)/10}%</b></div>`
-    : `<div class="cread"><b>${f.date}</b>　大盤 <b>${Math.round(f.close)}</b>　·　恐慌度 ${f.score}（${tag}）</div>`;
+  const read= mode==="index"
+    ? `<div class="cread"><b>${f.date}</b>　大盤 <b>${Math.round(f.close)}</b>　·　恐慌度 ${f.score}（${tag}）</div>`
+    : mode==="both"
+    ? `<div class="cread"><b>${f.date}</b>　恐慌度 <b>${f.score}</b>（${tag}）　·　大盤 <b>${Math.round(f.close)}</b></div>`
+    : `<div class="cread"><b>${f.date}</b>　恐慌度 <b>${f.score}</b>　·　${tag}　·　乖離 <b>${f.bias>0?"+":""}${Math.round(f.bias*10)/10}%</b></div>`;
+  const legend= mode==="both"
+    ? `<div class="label" style="margin-bottom:4px"><span style="color:var(--ink)">━ 恐慌度(左 0–100)</span>　<span style="color:var(--cool)">━ 大盤(右 ${Math.round(imin0)}–${Math.round(imax0)})</span></div>`
+    : "";
   const sc=s.map(d=>d.score);
-  const cap= isFear
-    ? `恐慌度區間 ${Math.min(...sc)}~${Math.max(...sc)}　·　綠=便宜/機會、紅=貪婪/該收手　·　點圖看該日`
-    : `大盤點數　·　點圖看該日　·　可切「恐慌度」看情緒`;
-  body.innerHTML=read+svg+`<div class="label" style="margin-top:6px">${cap}</div>`;
+  const cap= mode==="index"
+    ? `大盤點數　·　點圖看該日　·　可切「恐慌度」或「疊圖」`
+    : mode==="both"
+    ? `看情緒與指數的時間關係（誰領先、形狀），不是比大小　·　點圖看該日`
+    : `恐慌度區間 ${Math.min(...sc)}~${Math.max(...sc)}　·　綠=便宜/機會、紅=貪婪/該收手　·　點圖看該日`;
+  body.innerHTML=legend+read+svg+`<div class="label" style="margin-top:6px">${cap}</div>`;
 }
 
 // ── 統一點擊處理：圖表按鈕 / 關閉 / 營收開圖 / 名詞浮層 / 點外關閉 ──
