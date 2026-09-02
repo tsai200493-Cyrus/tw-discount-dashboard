@@ -1,0 +1,51 @@
+name: 新增追蹤（處理 Issue）
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: write     # 允許改 watchlist.txt / data.json
+  issues: write       # 允許回覆並關閉 Issue
+
+jobs:
+  add:
+    # 安全鎖：只處理「repo 擁有者本人」開、且標題以 [add] 開頭的 Issue
+    if: >-
+      github.event.issue.user.login == github.repository_owner &&
+      startsWith(github.event.issue.title, '[add]')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 驗證代號並嘗試加入
+        id: add
+        env:
+          FINMIND_TOKEN: ${{ secrets.FINMIND_TOKEN }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: python scripts/add_ticker.py
+
+      - name: 有加入才重算資料並 commit
+        if: steps.add.outputs.added == 'true'
+        env:
+          FINMIND_TOKEN: ${{ secrets.FINMIND_TOKEN }}
+        run: |
+          python scripts/build_data.py
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add watchlist.txt docs/data.json
+          git commit -m "feat: 追蹤 ${{ steps.add.outputs.code }} [skip ci]"
+          git push
+
+      - name: 回覆 Issue 並關閉
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MSG: ${{ steps.add.outputs.message }}
+        run: |
+          gh issue comment "${{ github.event.issue.number }}" --body "$MSG"
+          gh issue close "${{ github.event.issue.number }}"

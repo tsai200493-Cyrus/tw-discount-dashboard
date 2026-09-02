@@ -70,6 +70,18 @@
   <h1>打折窗口溫度計</h1>
   <div class="sub" id="sub">載入中…</div>
   <div class="hint">💡 有虛線的名詞（如 <span class="term" data-k="composite">綜合窗口</span>）點一下會跳出白話解釋。</div>
+
+  <div class="card" id="addcard">
+    <div class="label" style="margin-bottom:8px">＋ 新增追蹤股票</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <input id="newcode" inputmode="numeric" placeholder="輸入代號，如 2454"
+        style="flex:1;min-width:130px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font-size:.95rem">
+      <button id="addbtn"
+        style="padding:9px 16px;border:0;border-radius:8px;background:var(--open);color:#fff;font-weight:650;cursor:pointer">送出</button>
+    </div>
+    <div id="addmsg" class="label" style="margin-top:8px"></div>
+  </div>
+
   <div id="app"></div>
 
   <details>
@@ -107,6 +119,22 @@ document.addEventListener("click",e=>{
     tip.classList.remove("show");
   }
 });
+
+// 新增追蹤：驗證格式 → 開一張預先填好的 GitHub Issue（Action 會驗證＋加入）
+const REPO="tsai200493-Cyrus/tw-discount-dashboard";
+(function(){
+  const btn=document.getElementById("addbtn"), inp=document.getElementById("newcode"), msg=document.getElementById("addmsg");
+  function go(){
+    const v=(inp.value||"").trim();
+    if(!/^\d{4,6}[A-Za-z]?$/.test(v)){ msg.innerHTML='<span style="color:var(--shut)">請輸入正確代號（4 位數字，如 2454）。</span>'; return; }
+    const url=`https://github.com/${REPO}/issues/new?title=`+encodeURIComponent("[add] "+v)+
+      "&body="+encodeURIComponent("自動新增追蹤 "+v+"，送出後系統會驗證代號並加入清單。");
+    msg.innerHTML='已開好 GitHub 投件頁 → 按綠色 <b>Submit new issue</b> 就好，幾分鐘後網站會多這一檔。';
+    window.open(url,"_blank");
+  }
+  btn.addEventListener("click",go);
+  inp.addEventListener("keydown",e=>{ if(e.key==="Enter") go(); });
+})();
 
 fetch("./data.json?_="+Date.now()).then(r=>r.json()).then(render).catch(()=>{
   document.getElementById("sub").innerHTML =
