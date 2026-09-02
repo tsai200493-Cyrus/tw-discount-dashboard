@@ -255,6 +255,12 @@ function fearScore(closes){   // 與 build_data.py / 回測完全同式
   const score=Math.round(0.4*bclamp(50-bias*3.3)+0.3*bclamp(-dd*2.5)+0.3*bclamp((vol-12)/26*100));
   return {score, bias, dd, vol};
 }
+function mkReadInner(d, mode){        // 焦點讀數的內容（拖曳時即時換這段）
+  const tag= d.score>=65?"恐慌(機會)": d.score>=40?"中性":"貪婪(該收手)";
+  if(mode==="index") return `<b>${d.date}</b>　大盤 <b>${Math.round(d.close)}</b>　·　恐慌度 ${d.score}（${tag}）`;
+  if(mode==="both") return `<b>${d.date}</b>　恐慌度 <b>${d.score}</b>（${tag}）　·　大盤 <b>${Math.round(d.close)}</b>`;
+  return `<b>${d.date}</b>　恐慌度 <b>${d.score}</b>　·　${tag}　·　乖離 <b>${d.bias>0?"+":""}${Math.round(d.bias*10)/10}%</b>`;
+}
 function mkSync(){
   document.querySelectorAll("#mkchart .cbtns button").forEach(b=>{
     b.classList.toggle("on", b.dataset.mv===MK.view || (+b.dataset.mr)===MK.range);
@@ -327,29 +333,57 @@ function mkDraw(){
   marks+=`<text x="${W-padR}" y="${H-6}" font-size="7.5" fill="var(--muted)" text-anchor="end">${s[n-1].date.slice(0,7)}</text>`;
 
   const f=s[MK.focus], fx=X(MK.focus);
-  let foc=`<line x1="${fx.toFixed(1)}" y1="${padT}" x2="${fx.toFixed(1)}" y2="${(padT+ih).toFixed(1)}" stroke="var(--muted)" stroke-width=".7"/>`;
-  if(showIndex) foc+=`<circle cx="${fx.toFixed(1)}" cy="${Yi(f.close).toFixed(1)}" r="2.6" fill="var(--cool)"/>`;
-  if(showFear) foc+=`<circle cx="${fx.toFixed(1)}" cy="${Yf(f.score).toFixed(1)}" r="2.6" fill="var(--ink)"/>`;
-  const hit=`<rect class="mkhit" x="${padL}" y="${padT}" width="${iw}" height="${ih}" fill="transparent" style="cursor:pointer"/>`;
+  let foc=`<line id="mkfl" x1="${fx.toFixed(1)}" y1="${padT}" x2="${fx.toFixed(1)}" y2="${(padT+ih).toFixed(1)}" stroke="var(--muted)" stroke-width=".7"/>`;
+  if(showIndex) foc+=`<circle id="mkdi" cx="${fx.toFixed(1)}" cy="${Yi(f.close).toFixed(1)}" r="2.6" fill="var(--cool)"/>`;
+  if(showFear) foc+=`<circle id="mkdf" cx="${fx.toFixed(1)}" cy="${Yf(f.score).toFixed(1)}" r="2.6" fill="var(--ink)"/>`;
+  const hit=`<rect class="mkhit" x="${padL}" y="${padT}" width="${iw}" height="${ih}" fill="transparent" style="cursor:crosshair;touch-action:none"/>`;
   const svg=`<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">${bg}${lines}${marks}${foc}${hit}</svg>`;
 
-  const tag= f.score>=65?"恐慌(機會)": f.score>=40?"中性":"貪婪(該收手)";
-  const read= mode==="index"
-    ? `<div class="cread"><b>${f.date}</b>　大盤 <b>${Math.round(f.close)}</b>　·　恐慌度 ${f.score}（${tag}）</div>`
-    : mode==="both"
-    ? `<div class="cread"><b>${f.date}</b>　恐慌度 <b>${f.score}</b>（${tag}）　·　大盤 <b>${Math.round(f.close)}</b></div>`
-    : `<div class="cread"><b>${f.date}</b>　恐慌度 <b>${f.score}</b>　·　${tag}　·　乖離 <b>${f.bias>0?"+":""}${Math.round(f.bias*10)/10}%</b></div>`;
   const legend= mode==="both"
     ? `<div class="label" style="margin-bottom:4px"><span style="color:var(--ink)">━ 恐慌度(左 0–100)</span>　<span style="color:var(--cool)">━ 大盤(右 ${Math.round(imin0)}–${Math.round(imax0)})</span></div>`
     : "";
   const sc=s.map(d=>d.score);
   const cap= mode==="index"
-    ? `大盤點數　·　點圖看該日　·　可切「恐慌度」或「疊圖」`
+    ? `大盤點數　·　手指按著左右滑看每日　·　可切「恐慌度」或「疊圖」`
     : mode==="both"
-    ? `看情緒與指數的時間關係（誰領先、形狀），不是比大小　·　點圖看該日`
-    : `恐慌度區間 ${Math.min(...sc)}~${Math.max(...sc)}　·　綠=便宜/機會、紅=貪婪/該收手　·　點圖看該日`;
-  body.innerHTML=legend+read+svg+`<div class="label" style="margin-top:6px">${cap}</div>`;
+    ? `看情緒與指數的時間關係（誰領先、形狀），不是比大小　·　手指按著左右滑`
+    : `恐慌度區間 ${Math.min(...sc)}~${Math.max(...sc)}　·　綠=便宜/機會、紅=貪婪/該收手　·　手指按著左右滑`;
+  body.innerHTML=legend+`<div class="cread" id="mkread">${mkReadInner(f,mode)}</div>`+svg+`<div class="label" style="margin-top:6px">${cap}</div>`;
+
+  // 拖曳掃描用：預存每點座標＋焦點元素參照，滑動時只改焦點、不重繪整張
+  MK._pts=s.map((d,j)=>({x:X(j), yf:Yf(d.score), yi:Yi(d.close)}));
+  MK._s=s; MK._mode=mode;
+  MK._fl=body.querySelector("#mkfl"); MK._df=body.querySelector("#mkdf"); MK._di=body.querySelector("#mkdi"); MK._read=body.querySelector("#mkread");
 }
+function mkUpdateFocus(idx){          // 拖曳中即時更新（輕量，不呼叫 mkDraw）
+  if(!MK._pts || !MK._pts.length) return;
+  idx=Math.max(0,Math.min(MK._pts.length-1,idx));
+  if(idx===MK.focus) return;
+  MK.focus=idx;
+  const p=MK._pts[idx], d=MK._s[idx];
+  if(MK._fl){ MK._fl.setAttribute("x1",p.x.toFixed(1)); MK._fl.setAttribute("x2",p.x.toFixed(1)); }
+  if(MK._df){ MK._df.setAttribute("cx",p.x.toFixed(1)); MK._df.setAttribute("cy",p.yf.toFixed(1)); }
+  if(MK._di){ MK._di.setAttribute("cx",p.x.toFixed(1)); MK._di.setAttribute("cy",p.yi.toFixed(1)); }
+  if(MK._read) MK._read.innerHTML=mkReadInner(d, MK._mode);
+}
+(function(){                          // 拖曳掃描：按著在圖上左右滑，焦點跟著跑
+  const modal=document.getElementById("mkchart"); if(!modal) return;
+  let dragging=false;
+  function idxFromX(clientX){
+    const hitEl=modal.querySelector(".mkhit"); if(!hitEl || !MK._n) return null;
+    const r=hitEl.getBoundingClientRect();
+    return Math.round(bclamp((clientX-r.left)/r.width,0,1)*(MK._n-1));
+  }
+  modal.addEventListener("pointerdown", e=>{
+    if(!e.target.closest(".mkhit")) return;
+    dragging=true; const i=idxFromX(e.clientX); if(i!=null) mkUpdateFocus(i); e.preventDefault();
+  });
+  window.addEventListener("pointermove", e=>{
+    if(!dragging) return; const i=idxFromX(e.clientX); if(i!=null) mkUpdateFocus(i); e.preventDefault();
+  });
+  window.addEventListener("pointerup", ()=>{ dragging=false; });
+  window.addEventListener("pointercancel", ()=>{ dragging=false; });
+})();
 
 // ── 統一點擊處理：圖表按鈕 / 關閉 / 營收開圖 / 名詞浮層 / 點外關閉 ──
 document.addEventListener("click", e=>{
