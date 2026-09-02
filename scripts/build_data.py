@@ -121,31 +121,26 @@ def per_band(code):
             "max": round(max(vals), 1)}
 
 
-def revenue_momentum(code):
-    """回傳近月營收動能：最新單月 YoY、近3月平均 YoY、以及加速/減速趨勢。
+def revenue_data(code):
+    """回傳：最新單月營收 YoY（計分/顯示用）＋ 近 36 個月的月營收明細（供圖表）。
 
-    單月 YoY 雜訊大且看不出方向，故基本面分數改用「近3月平均 YoY」，
-    並用「近3月平均 − 前3月平均」判斷加速/減速。
+    ［決策 2026-09｜需求人］基本面分數用「單月 YoY」（不用近3月平均）。
+      前提：需求人偏好簡單透明的分數，成長動能改用「歷年營收圖」自己判讀。
+      已知代價：單月 YoY 有雜訊——但點開圖表可補足趨勢判斷。
     """
-    start = (dt.date.today() - dt.timedelta(days=800)).isoformat()  # ~26 個月，足夠算前3月的 YoY
+    start = (dt.date.today() - dt.timedelta(days=1500)).isoformat()  # ~49 個月，讓最近36月都有 YoY
     rows = _get("TaiwanStockMonthRevenue", code, start)
-    if isinstance(rows, dict) or len(rows) < 15:
+    if isinstance(rows, dict) or len(rows) < 13:
         return None
     rows = sorted(rows, key=lambda x: (x["revenue_year"], x["revenue_month"]))
-    rev = [r["revenue"] for r in rows]
-    # 逐月 YoY（第 i 月 vs 第 i-12 月）
-    yoy = []
-    for i in range(12, len(rev)):
-        base = rev[i - 12]
-        yoy.append(round((rev[i] - base) / base * 100, 1) if base else None)
-    yoy = [y for y in yoy if y is not None]
-    if not yoy:
-        return None
-    latest = yoy[-1]
-    avg3 = round(sum(yoy[-3:]) / len(yoy[-3:]), 1)
-    prior3 = round(sum(yoy[-6:-3]) / 3, 1) if len(yoy) >= 6 else None
-    trend = None if prior3 is None else round(avg3 - prior3, 1)  # 正=加速、負=減速
-    return {"latest": latest, "avg3": avg3, "prior3": prior3, "trend": trend}
+    hist = []
+    for i, r in enumerate(rows):
+        yoy = None
+        if i >= 12 and rows[i - 12]["revenue"]:
+            yoy = round((r["revenue"] - rows[i - 12]["revenue"]) / rows[i - 12]["revenue"] * 100, 1)
+        hist.append({"ym": f"{r['revenue_year']}-{r['revenue_month']:02d}",
+                     "rev": round(r["revenue"] / 1e8, 1), "yoy": yoy})
+    return {"latest_yoy": hist[-1]["yoy"], "history": hist[-36:]}
 
 
 def latest_close(code):
@@ -166,26 +161,24 @@ def window_label(score):
 
 def build_stock(code, name, mkf):
     per = per_band(code)
-    rm = revenue_momentum(code)
+    rd = revenue_data(code)
     price = latest_close(code)
-    yoy = rm["latest"] if rm else None          # 最新單月（顯示用）
-    yoy_avg3 = rm["avg3"] if rm else None        # 近3月平均（計分用，去雜訊）
-    yoy_trend = rm["trend"] if rm else None      # 加速(+)/減速(-)
+    yoy = rd["latest_yoy"] if rd else None          # 單月 YoY（計分＋顯示）
+    history = rd["history"] if rd else None          # 近36月明細（圖表用）
     if per is None:  # 無本益比 → 本夢比，排除評分
         return {"code": code, "name": name, "price": price, "per": None,
                 "percentile": None, "val_cheap": None, "yoy": yoy,
-                "yoy_avg3": yoy_avg3, "yoy_trend": yoy_trend, "fund": None,
+                "revenue_history": history, "fund": None,
                 "composite": None, "label": "資料不足(本夢比)"}
     val_cheap = 100 - per["percentile"]
-    fund = None if yoy_avg3 is None else round(clamp(45 + yoy_avg3 * 1.2))
+    fund = None if yoy is None else round(clamp(45 + yoy * 1.2))
     composite = round(W_VALUE * val_cheap + W_FUND * (fund if fund is not None else 45)
                       + W_MARKET * mkf)
     return {"code": code, "name": name, "price": price, "per": per["now"],
             "percentile": per["percentile"], "per_min": per["min"],
             "per_median": per["median"], "per_max": per["max"],
-            "val_cheap": val_cheap, "yoy": yoy, "yoy_avg3": yoy_avg3,
-            "yoy_trend": yoy_trend, "fund": fund,
-            "composite": composite, "label": window_label(composite)}
+            "val_cheap": val_cheap, "yoy": yoy, "revenue_history": history,
+            "fund": fund, "composite": composite, "label": window_label(composite)}
 
 
 def main():

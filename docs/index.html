@@ -8,7 +8,7 @@
   :root{
     --bg:#f6f6f3; --card:#ffffff; --ink:#1b1c1e; --muted:#6b6f76; --line:#e6e5df;
     --open:#1f9d78; --half:#c9922a; --shut:#b0564a; --dream:#7a7d84;
-    --barbg:#eceae3; --cool:#1f9d78; --hot:#c9662a;
+    --barbg:#eceae3; --cool:#2a7fb8; --hot:#c9662a;
     --shadow:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
   }
   @media (prefers-color-scheme:dark){
@@ -30,10 +30,12 @@
   .label{font-size:.75rem;color:var(--muted);letter-spacing:.02em}
   .term{border-bottom:1px dashed currentColor;cursor:pointer;padding-bottom:1px}
   .term::after{content:"ⓘ";font-size:.7em;vertical-align:super;opacity:.55;margin-left:1px}
+  .chartlink{border-bottom:1px dashed currentColor;cursor:pointer}
+  .chartlink::after{content:"📊";font-size:.82em;margin-left:2px}
   .mkt-score{font-size:2.6rem;font-weight:700;line-height:1}
   .mkt-tag{font-size:.95rem;font-weight:600;margin-left:8px}
   .thermo{height:14px;border-radius:8px;margin:14px 0 6px;position:relative;
-    background:linear-gradient(90deg,var(--hot),#d8b24a,var(--cool))}
+    background:linear-gradient(90deg,var(--hot),#d8b24a,var(--open))}
   .thermo .mark{position:absolute;top:-5px;width:4px;height:24px;border-radius:2px;
     background:var(--ink);box-shadow:0 0 0 2px var(--card)}
   .scale{display:flex;justify-content:space-between;font-size:.72rem;color:var(--muted)}
@@ -56,20 +58,33 @@
   details li{margin:.3em 0}
   .foot{color:var(--muted);font-size:.76rem;margin-top:18px;line-height:1.6}
   .err{color:var(--shut);font-weight:600}
-  /* 點名詞跳出的白話解釋（底部浮層） */
+  /* 名詞白話浮層 */
   #tip{position:fixed;left:12px;right:12px;bottom:12px;max-width:796px;margin:0 auto;
     background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;
     box-shadow:0 6px 24px rgba(0,0,0,.18);display:none;z-index:50;font-size:.9rem;line-height:1.55}
   #tip.show{display:block}
   #tip .k{font-weight:700;margin-bottom:4px}
   #tip .x{float:right;color:var(--muted);font-size:.8rem}
+  /* 歷年營收圖視窗 */
+  #chart{position:fixed;left:8px;right:8px;bottom:8px;max-width:804px;margin:0 auto;
+    background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 16px 16px;
+    box-shadow:0 8px 30px rgba(0,0,0,.22);display:none;z-index:60}
+  #chart.show{display:block}
+  .chead{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+  .chead b{font-size:1.05rem}
+  .cx{cursor:pointer;color:var(--muted);font-size:1.15rem;padding:2px 8px}
+  .cbtns{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+  .cbtns button{padding:5px 11px;border:1px solid var(--line);border-radius:999px;
+    background:var(--bg);color:var(--muted);font-size:.8rem;cursor:pointer}
+  .cbtns button.on{background:var(--ink);color:var(--card);border-color:var(--ink)}
+  .csp{flex:1}
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>打折窗口溫度計</h1>
   <div class="sub" id="sub">載入中…</div>
-  <div class="hint">💡 有虛線的名詞（如 <span class="term" data-k="composite">綜合窗口</span>）點一下會跳出白話解釋。</div>
+  <div class="hint">💡 有虛線的名詞（ⓘ）點一下看白話解釋；「營收動能📊」點一下看歷年營收圖。</div>
 
   <div class="card" id="addcard">
     <div class="label" style="margin-bottom:8px">＋ 新增追蹤股票</div>
@@ -91,42 +106,100 @@
 
   <div class="foot" id="foot"></div>
 </div>
+
 <div id="tip"></div>
+<div id="chart">
+  <div class="chead"><b id="ctitle"></b><span class="cx">✕</span></div>
+  <div class="cbtns">
+    <button data-v="rev">月營收</button><button data-v="yoy">成長率 YoY</button>
+    <span class="csp"></span>
+    <button data-r="12">1年</button><button data-r="24">2年</button><button data-r="36">3年</button>
+  </div>
+  <div class="cbody"></div>
+</div>
 
 <script>
 const GLOSSARY = {
   market:"市場恐慌度：全大盤共用。高＝大家在恐慌（折扣容易出現）；低＝大家貪婪、追高危險。用大盤乖離／回檔／波動算，不用位階（多頭趨勢會失真）。",
   composite:"綜合窗口：0.40×估值便宜 ＋ 0.25×基本面 ＋ 0.35×市場恐慌。≥65 窗口開（便宜＋恐慌）｜45–64 半開｜<45 窗口關（貴＋貪婪）。這是情境傾向，不是買賣訊號。",
   val_cheap:"估值便宜度：這檔的本益比，站在它自己過去 5 年的高低位置。越低（越接近自己的便宜區）分數越高（＝100 − 本益比位階）。回答「相對它自己，現在便宜還貴」。",
-  fund:"基本面：公司賺不賺錢、在成長還衰退。用「近 3 個月平均」的月營收年增率換算（不用單月，避免雜訊），成長越猛分數越高。作用是確認「便宜是真折扣，不是公司在爛掉」。",
+  fund:"基本面：公司賺不賺錢、在成長還衰退。用最新月營收年增率（YoY）換算，成長越猛分數越高。單月有雜訊，想看趨勢就點「營收動能📊」看歷年圖。",
   per:"PER（本益比）：股價 ÷ 每股盈餘。買一塊錢的獲利要付幾塊，數字越大＝買得越貴。",
   pctl:"位階：現在的本益比，站在它自己過去 5 年由低到高的第幾個百分點。越低＝越接近它自己的便宜區。",
-  yoy:"營收動能：月營收年增率，取「近 3 個月平均」（濾掉單月雜訊）。旁邊的 ↑加速／↓減速 是比較「近 3 月平均」和「前 3 月平均」——看成長在變快還變慢（單看一個月看不出來）。",
 };
-const COOL="#1f9d78", HOT="#c9662a";
 const term=(k,t)=>`<span class="term" data-k="${k}">${t}</span>`;
+const chartLink=(code)=>`<span class="chartlink" data-code="${code}">營收動能</span>`;
 function compColor(s){ return s>=65?"var(--open)": s>=45?"var(--half)": "var(--shut)"; }
-function mktColor(s){ return s>=65?COOL : s>=40?"#c9922a" : HOT; }
+function mktColor(s){ return s>=65?"var(--open)" : s>=40?"var(--half)" : "var(--hot)"; }
 function esc(x){ return x==null?"—":x; }
-function trendTag(t){
-  if(t==null) return "";
-  if(t>3)  return ' <span style="color:var(--open)">↑加速</span>';
-  if(t<-3) return ' <span style="color:var(--shut)">↓減速</span>';
-  return ' <span style="color:var(--muted)">→持平</span>';
+
+// ── 歷年營收圖 ──────────────────────────────
+let CH={code:null, view:"rev", range:24};
+function syncBtns(){
+  document.querySelectorAll("#chart .cbtns button").forEach(b=>{
+    b.classList.toggle("on", b.dataset.v===CH.view || (+b.dataset.r)===CH.range);
+  });
+}
+function openChart(code){
+  const chart=document.getElementById("chart");
+  const s=(window.DATA?.stocks||[]).find(x=>x.code===code);
+  document.getElementById("ctitle").textContent=(s?(s.name||"")+" "+s.code:code)+"　營收";
+  if(!s || !s.revenue_history || !s.revenue_history.length){
+    document.querySelector("#chart .cbody").innerHTML='<div class="label">這檔沒有月營收資料（可能是興櫃/新上市/金融股）。</div>';
+    chart.classList.add("show"); return;
+  }
+  CH.code=code; drawChart(); syncBtns(); chart.classList.add("show");
+}
+function drawChart(){
+  const s=window.DATA.stocks.find(x=>x.code===CH.code);
+  const h=s.revenue_history.slice(-CH.range);
+  const isRev=CH.view==="rev";
+  const vals=h.map(d=> isRev?(d.rev||0):(d.yoy==null?0:d.yoy));
+  const W=320,H=128,pad=8;
+  let maxV=Math.max(...vals), minV=Math.min(...vals);
+  if(isRev){ minV=0; } else { maxV=Math.max(maxV,1); minV=Math.min(minV,0); }
+  const span=(maxV-minV)||1;
+  const iw=W-2*pad, bw=iw/h.length;
+  const y=v=> pad+(maxV-v)/span*(H-2*pad);
+  const y0=y(0);
+  let bars="";
+  h.forEach((d,i)=>{
+    const v=isRev?(d.rev||0):(d.yoy==null?0:d.yoy);
+    const x=pad+i*bw+bw*0.12, w=Math.max(1,bw*0.76), yv=y(v);
+    const top=Math.min(yv,y0), ht=Math.max(1,Math.abs(yv-y0));
+    const col=isRev?"var(--cool)":(v>=0?"var(--open)":"var(--shut)");
+    bars+=`<rect x="${x.toFixed(1)}" y="${top.toFixed(1)}" width="${w.toFixed(1)}" height="${ht.toFixed(1)}" rx="1" fill="${col}"/>`;
+  });
+  const zline=isRev?"":`<line x1="${pad}" y1="${y0.toFixed(1)}" x2="${W-pad}" y2="${y0.toFixed(1)}" stroke="var(--muted)" stroke-width=".5" opacity=".5"/>`;
+  const labs=`<text x="${pad}" y="${H-1}" font-size="7" fill="var(--muted)">${h[0].ym}</text>`+
+    `<text x="${W-pad}" y="${H-1}" font-size="7" fill="var(--muted)" text-anchor="end">${h[h.length-1].ym}</text>`;
+  const last=h[h.length-1];
+  const head=isRev?`最高 ${Math.round(maxV)} 億／最新 ${last.rev} 億`
+                  :`區間 ${Math.round(minV)}% ~ ${Math.round(maxV)}%／最新 ${last.yoy==null?"—":last.yoy+"%"}`;
+  document.querySelector("#chart .cbody").innerHTML=
+    `<div class="label" style="margin-bottom:6px">${head}</div>`+
+    `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">${zline}${bars}${labs}</svg>`+
+    `<div class="label" style="margin-top:6px">${isRev?"每月營收（億元）":"月營收年增率 YoY（綠正紅負）"}　·　近 ${CH.range} 個月</div>`;
 }
 
-// 點名詞 → 底部浮層解釋；點別處關閉
-document.addEventListener("click",e=>{
-  const t=e.target.closest(".term"), tip=document.getElementById("tip");
+// ── 統一點擊處理：圖表按鈕 / 關閉 / 營收開圖 / 名詞浮層 / 點外關閉 ──
+document.addEventListener("click", e=>{
+  const chart=document.getElementById("chart"), tip=document.getElementById("tip");
+  const cbtn=e.target.closest("#chart [data-v],#chart [data-r]");
+  if(cbtn){ if(cbtn.dataset.v)CH.view=cbtn.dataset.v; if(cbtn.dataset.r)CH.range=+cbtn.dataset.r; drawChart(); syncBtns(); e.stopPropagation(); return; }
+  if(e.target.closest(".cx")){ chart.classList.remove("show"); return; }
+  const cl=e.target.closest(".chartlink");
+  if(cl){ tip.classList.remove("show"); openChart(cl.dataset.code); e.stopPropagation(); return; }
+  const t=e.target.closest(".term");
   if(t && GLOSSARY[t.dataset.k]){
     tip.innerHTML='<span class="x">點任意處關閉 ✕</span><div class="k">'+t.textContent.replace("ⓘ","")+'</div>'+GLOSSARY[t.dataset.k];
-    tip.classList.add("show"); e.stopPropagation();
-  }else if(!e.target.closest("#tip")){
-    tip.classList.remove("show");
+    tip.classList.add("show"); e.stopPropagation(); return;
   }
+  if(!e.target.closest("#chart")) chart.classList.remove("show");
+  if(!e.target.closest("#tip")) tip.classList.remove("show");
 });
 
-// 新增追蹤：驗證格式 → 開一張預先填好的 GitHub Issue（Action 會驗證＋加入）
+// ── 新增追蹤 ──
 const REPO="tsai200493-Cyrus/tw-discount-dashboard";
 (function(){
   const btn=document.getElementById("addbtn"), inp=document.getElementById("newcode"), msg=document.getElementById("addmsg");
@@ -148,6 +221,7 @@ fetch("./data.json?_="+Date.now()).then(r=>r.json()).then(render).catch(()=>{
 });
 
 function render(d){
+  window.DATA=d;
   const m=d.market||{};
   const gen=(d.generated_at||"").replace("T"," ").replace("+00:00"," UTC");
   document.getElementById("sub").textContent =
@@ -187,7 +261,7 @@ function render(d){
           <span>現價 <b>${esc(s.price)}</b></span>
           <span>${term('per','PER')} <b>${esc(s.per)}</b>（${term('pctl','位階')} <b>${esc(s.percentile)}%</b>）</span>
           <span>${term('val_cheap','估值便宜度')} <b>${esc(s.val_cheap)}</b></span>
-          <span>${term('yoy','營收動能')} <b>${s.yoy_avg3>0?"+":""}${esc(s.yoy_avg3)}%</b>${trendTag(s.yoy_trend)}</span>
+          <span>${chartLink(s.code)} <b>${s.yoy>0?"+":""}${esc(s.yoy)}%</b></span>
           <span>${term('fund','基本面')} <b>${esc(s.fund)}</b></span>
         </div>
         <div class="perbar"><div class="dot" style="left:${Math.max(3,Math.min(97,pos))}%"></div></div>
@@ -198,12 +272,13 @@ function render(d){
       <div class="card stock">
         <div><span class="name">${s.name||""}</span><span class="code">${s.code}</span></div>
         <div class="comp label" style="font-size:.8rem;color:var(--dream)">本夢比</div>
-        <div class="metrics" style="grid-column:1/-1">${s.label} — 無本益比可評分，屬新藥/夢股，請用賭注 size 對待。</div>
+        <div class="metrics" style="grid-column:1/-1">${s.label} — 無本益比可評分，屬新藥/夢股，請用賭注 size 對待。${s.revenue_history&&s.revenue_history.length?' '+chartLink(s.code)+'（有營收可看）':''}</div>
       </div>`);
   }
 
-  const gl=document.getElementById("glosslist");
-  gl.innerHTML = Object.values(GLOSSARY).map(v=>"<li>"+v+"</li>").join("");
+  document.getElementById("glosslist").innerHTML =
+    Object.values(GLOSSARY).map(v=>"<li>"+v+"</li>").join("")+
+    "<li>營收動能📊：點股票的「營收動能」可看歷年月營收與 YoY 成長率圖（可切換、選 1/2/3 年）。</li>";
 
   const w=d.weights||{};
   document.getElementById("foot").innerHTML =
