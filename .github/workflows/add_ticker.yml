@@ -1,4 +1,4 @@
-name: 新增追蹤（處理 Issue）
+name: 新增／移除追蹤（處理 Issue）
 
 on:
   issues:
@@ -10,10 +10,10 @@ permissions:
 
 jobs:
   add:
-    # 安全鎖：只處理「repo 擁有者本人」開、且標題以 [add] 開頭的 Issue
+    # 安全鎖：只處理「repo 擁有者本人」開、且標題以 [add] 或 [remove] 開頭的 Issue
     if: >-
       github.event.issue.user.login == github.repository_owner &&
-      startsWith(github.event.issue.title, '[add]')
+      (startsWith(github.event.issue.title, '[add]') || startsWith(github.event.issue.title, '[remove]'))
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -22,7 +22,7 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: 驗證代號並嘗試加入
+      - name: 處理清單（加入或移除）
         id: add
         env:
           FINMIND_TOKEN: ${{ secrets.FINMIND_TOKEN }}
@@ -30,8 +30,8 @@ jobs:
           ISSUE_BODY: ${{ github.event.issue.body }}
         run: python scripts/add_ticker.py
 
-      - name: 有加入才重算資料並 commit
-        if: steps.add.outputs.added == 'true'
+      - name: 清單有變才重算資料並 commit
+        if: steps.add.outputs.changed == 'true'
         env:
           FINMIND_TOKEN: ${{ secrets.FINMIND_TOKEN }}
         run: |
@@ -39,7 +39,7 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add watchlist.txt docs/data.json
-          git commit -m "feat: 追蹤 ${{ steps.add.outputs.code }} [skip ci]"
+          git commit -m "chore: watchlist 更新 ${{ steps.add.outputs.code }} [skip ci]"
           git push
 
       - name: 回覆 Issue 並關閉
