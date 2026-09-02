@@ -78,6 +78,9 @@
     background:var(--bg);color:var(--muted);font-size:.8rem;cursor:pointer}
   .cbtns button.on{background:var(--ink);color:var(--card);border-color:var(--ink)}
   .csp{flex:1}
+  .cread{font-size:.92rem;margin-bottom:8px;padding:7px 10px;background:var(--bg);
+    border:1px solid var(--line);border-radius:8px;font-variant-numeric:tabular-nums}
+  .cread b{font-weight:700}
 </style>
 </head>
 <body>
@@ -134,7 +137,7 @@ function mktColor(s){ return s>=65?"var(--open)" : s>=40?"var(--half)" : "var(--
 function esc(x){ return x==null?"—":x; }
 
 // ── 歷年營收圖 ──────────────────────────────
-let CH={code:null, view:"rev", range:24};
+let CH={code:null, view:"rev", range:24, focus:null};
 function syncBtns(){
   document.querySelectorAll("#chart .cbtns button").forEach(b=>{
     b.classList.toggle("on", b.dataset.v===CH.view || (+b.dataset.r)===CH.range);
@@ -148,45 +151,73 @@ function openChart(code){
     document.querySelector("#chart .cbody").innerHTML='<div class="label">這檔沒有月營收資料（可能是興櫃/新上市/金融股）。</div>';
     chart.classList.add("show"); return;
   }
-  CH.code=code; drawChart(); syncBtns(); chart.classList.add("show");
+  CH.code=code; CH.focus=null; drawChart(); syncBtns(); chart.classList.add("show");
 }
 function drawChart(){
   const s=window.DATA.stocks.find(x=>x.code===CH.code);
   const h=s.revenue_history.slice(-CH.range);
   const isRev=CH.view==="rev";
-  const vals=h.map(d=> isRev?(d.rev||0):(d.yoy==null?0:d.yoy));
-  const W=320,H=128,pad=8;
-  let maxV=Math.max(...vals), minV=Math.min(...vals);
-  if(isRev){ minV=0; } else { maxV=Math.max(maxV,1); minV=Math.min(minV,0); }
+  if(CH.focus==null) CH.focus=h.length-1;
+  CH.focus=Math.max(0,Math.min(h.length-1,CH.focus));
+  const val=d=> isRev?(d.rev||0):(d.yoy==null?0:d.yoy);
+  const vals=h.map(val);
+  const W=340,H=160,padL=30,padR=10,padT=10,padB=22;
+  const iw=W-padL-padR, ih=H-padT-padB;
+  const maxV=Math.max(...vals,1);
+  const minV=isRev?0:Math.min(...vals,0);
   const span=(maxV-minV)||1;
-  const iw=W-2*pad, bw=iw/h.length;
-  const y=v=> pad+(maxV-v)/span*(H-2*pad);
-  const y0=y(0);
-  let bars="";
-  h.forEach((d,i)=>{
-    const v=isRev?(d.rev||0):(d.yoy==null?0:d.yoy);
-    const x=pad+i*bw+bw*0.12, w=Math.max(1,bw*0.76), yv=y(v);
-    const top=Math.min(yv,y0), ht=Math.max(1,Math.abs(yv-y0));
-    const col=isRev?"var(--cool)":(v>=0?"var(--open)":"var(--shut)");
-    bars+=`<rect x="${x.toFixed(1)}" y="${top.toFixed(1)}" width="${w.toFixed(1)}" height="${ht.toFixed(1)}" rx="1" fill="${col}"/>`;
+  const bw=iw/h.length;
+  const y=v=> padT+(maxV-v)/span*ih;
+  const yz=y(0);
+
+  // Y 軸格線＋刻度數值
+  const ticks=[...new Set(isRev?[0,maxV]:[minV,0,maxV])];
+  let grid="";
+  ticks.forEach(tv=>{
+    const yy=y(tv);
+    grid+=`<line x1="${padL}" y1="${yy.toFixed(1)}" x2="${W-padR}" y2="${yy.toFixed(1)}" stroke="var(--line)" stroke-width=".6"/>`;
+    grid+=`<text x="${(padL-4).toFixed(1)}" y="${(yy+2.6).toFixed(1)}" font-size="7.5" fill="var(--muted)" text-anchor="end">${isRev?Math.round(tv):(tv>0?"+":"")+Math.round(tv)+"%"}</text>`;
   });
-  const zline=isRev?"":`<line x1="${pad}" y1="${y0.toFixed(1)}" x2="${W-pad}" y2="${y0.toFixed(1)}" stroke="var(--muted)" stroke-width=".5" opacity=".5"/>`;
-  const labs=`<text x="${pad}" y="${H-1}" font-size="7" fill="var(--muted)">${h[0].ym}</text>`+
-    `<text x="${W-pad}" y="${H-1}" font-size="7" fill="var(--muted)" text-anchor="end">${h[h.length-1].ym}</text>`;
-  const last=h[h.length-1];
-  const head=isRev?`最高 ${Math.round(maxV)} 億／最新 ${last.rev} 億`
-                  :`區間 ${Math.round(minV)}% ~ ${Math.round(maxV)}%／最新 ${last.yoy==null?"—":last.yoy+"%"}`;
+
+  // 長條＋年份分隔線＋透明點擊區（整欄可點）
+  let bars="", marks="", hits="";
+  h.forEach((d,i)=>{
+    const v=val(d), cx=padL+i*bw;
+    const bx=cx+bw*0.15, w=Math.max(1.2,bw*0.7), yv=y(v);
+    const top=Math.min(yv,yz), ht=Math.max(1,Math.abs(yv-yz));
+    const foc=(i===CH.focus);
+    const col=isRev?"var(--cool)":(v>=0?"var(--open)":"var(--shut)");
+    if(foc) bars+=`<rect x="${cx.toFixed(1)}" y="${padT}" width="${bw.toFixed(1)}" height="${ih}" fill="var(--ink)" opacity=".07"/>`;
+    bars+=`<rect x="${bx.toFixed(1)}" y="${top.toFixed(1)}" width="${w.toFixed(1)}" height="${ht.toFixed(1)}" rx="1" fill="${col}" opacity="${foc?1:.6}"/>`;
+    const mo=d.ym.slice(5);
+    if(mo==="01"){
+      marks+=`<line x1="${cx.toFixed(1)}" y1="${padT}" x2="${cx.toFixed(1)}" y2="${(padT+ih).toFixed(1)}" stroke="var(--line)" stroke-width=".6" stroke-dasharray="2 2"/>`;
+      marks+=`<text x="${(cx+bw/2).toFixed(1)}" y="${H-6}" font-size="7.5" fill="var(--muted)" text-anchor="middle">${d.ym.slice(0,4)}</text>`;
+    } else if(i===0){
+      marks+=`<text x="${(cx+bw/2).toFixed(1)}" y="${H-6}" font-size="7.5" fill="var(--muted)" text-anchor="middle">${d.ym.slice(0,4)}</text>`;
+    }
+    hits+=`<rect class="hit" data-i="${i}" x="${cx.toFixed(1)}" y="${padT}" width="${bw.toFixed(1)}" height="${ih}" fill="transparent" style="cursor:pointer"/>`;
+  });
+
+  const svg=`<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">${grid}${bars}${marks}${hits}</svg>`;
+
+  // 選中月份的讀數（同時秀營收與 YoY，不管目前看哪個檢視）
+  const f=h[CH.focus];
+  const yoyTxt=f.yoy==null?"—":(f.yoy>0?"+":"")+f.yoy+"%";
+  const readout=`<div class="cread"><b>${f.ym}</b>　營收 <b>${f.rev}</b> 億　·　YoY <b>${yoyTxt}</b></div>`;
+
   document.querySelector("#chart .cbody").innerHTML=
-    `<div class="label" style="margin-bottom:6px">${head}</div>`+
-    `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">${zline}${bars}${labs}</svg>`+
-    `<div class="label" style="margin-top:6px">${isRev?"每月營收（億元）":"月營收年增率 YoY（綠正紅負）"}　·　近 ${CH.range} 個月</div>`;
+    readout+svg+
+    `<div class="label" style="margin-top:6px">${isRev?"每月營收（億元）":"月營收年增率 YoY（綠正紅負）"}　·　近 ${CH.range} 個月　·　點長條看該月數字</div>`;
 }
 
 // ── 統一點擊處理：圖表按鈕 / 關閉 / 營收開圖 / 名詞浮層 / 點外關閉 ──
 document.addEventListener("click", e=>{
   const chart=document.getElementById("chart"), tip=document.getElementById("tip");
   const cbtn=e.target.closest("#chart [data-v],#chart [data-r]");
-  if(cbtn){ if(cbtn.dataset.v)CH.view=cbtn.dataset.v; if(cbtn.dataset.r)CH.range=+cbtn.dataset.r; drawChart(); syncBtns(); e.stopPropagation(); return; }
+  if(cbtn){ if(cbtn.dataset.v)CH.view=cbtn.dataset.v; if(cbtn.dataset.r){CH.range=+cbtn.dataset.r; CH.focus=null;} drawChart(); syncBtns(); e.stopPropagation(); return; }
+  const hit=e.target.closest("#chart .hit");
+  if(hit){ CH.focus=+hit.getAttribute("data-i"); drawChart(); e.stopPropagation(); return; }
   if(e.target.closest(".cx")){ chart.classList.remove("show"); return; }
   const cl=e.target.closest(".chartlink");
   if(cl){ tip.classList.remove("show"); openChart(cl.dataset.code); e.stopPropagation(); return; }
