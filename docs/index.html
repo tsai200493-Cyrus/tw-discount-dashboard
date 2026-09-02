@@ -32,6 +32,8 @@
   .term::after{content:"ⓘ";font-size:.7em;vertical-align:super;opacity:.55;margin-left:1px}
   .chartlink{border-bottom:1px dashed currentColor;cursor:pointer}
   .chartlink::after{content:"📊";font-size:.82em;margin-left:2px}
+  .btlink{border-bottom:1px dashed currentColor;cursor:pointer}
+  .btlink::after{content:"🕰";font-size:.82em;margin-left:2px}
   .mkt-score{font-size:2.6rem;font-weight:700;line-height:1}
   .mkt-tag{font-size:.95rem;font-weight:600;margin-left:8px}
   .thermo{height:14px;border-radius:8px;margin:14px 0 6px;position:relative;
@@ -103,6 +105,19 @@
 
   <div id="app"></div>
 
+  <div class="card" id="btcard">
+    <div class="label" style="margin-bottom:8px">🕰 時光倒流回測（輸入代號＋日期，算「當時」的溫度計數字）</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <input id="btcode" inputmode="numeric" placeholder="代號 如 6669"
+        style="width:120px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font-size:.95rem">
+      <input id="btdate" type="date"
+        style="padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font-size:.95rem">
+      <button id="btbtn"
+        style="padding:9px 16px;border:0;border-radius:8px;background:var(--cool);color:#fff;font-weight:650;cursor:pointer">查詢</button>
+    </div>
+    <div id="btout" style="margin-top:8px"></div>
+  </div>
+
   <details>
     <summary>全部欄位一次看（白話）</summary>
     <ul id="glosslist"></ul>
@@ -133,6 +148,7 @@ const GLOSSARY = {
 };
 const term=(k,t)=>`<span class="term" data-k="${k}">${t}</span>`;
 const chartLink=(code)=>`<span class="chartlink" data-code="${code}">營收動能</span>`;
+const btLink=(code)=>`<span class="btlink" data-code="${code}">回測</span>`;
 function compColor(s){ return s>=65?"var(--open)": s>=45?"var(--half)": "var(--shut)"; }
 function mktColor(s){ return s>=65?"var(--open)" : s>=40?"var(--half)" : "var(--hot)"; }
 function esc(x){ return x==null?"—":x; }
@@ -222,6 +238,10 @@ document.addEventListener("click", e=>{
   if(e.target.closest(".cx")){ chart.classList.remove("show"); return; }
   const cl=e.target.closest(".chartlink");
   if(cl){ tip.classList.remove("show"); openChart(cl.dataset.code); e.stopPropagation(); return; }
+  const bl=e.target.closest(".btlink");
+  if(bl){ tip.classList.remove("show"); const ci=document.getElementById("btcode");
+    if(ci){ ci.value=bl.dataset.code; document.getElementById("btcard").scrollIntoView({behavior:"smooth",block:"center"}); ci.focus(); }
+    e.stopPropagation(); return; }
   const t=e.target.closest(".term");
   if(t && GLOSSARY[t.dataset.k]){
     tip.innerHTML='<span class="x">點任意處關閉 ✕</span><div class="k">'+t.textContent.replace("ⓘ","")+'</div>'+GLOSSARY[t.dataset.k];
@@ -299,6 +319,117 @@ const GHAPI="https://api.github.com/repos/"+REPO;
   inp.addEventListener("keydown",e=>{ if(e.key==="Enter") go(); });
 })();
 
+// ── 時光倒流回測（瀏覽器直接算；資料取自 FinMind 公開 API，唯讀免 token）──
+// 公式與 build_data.py 一致，只餵「as_of 當下拿得到」的資料。
+const FM="https://api.finmindtrade.com/api/v4/data";
+async function fmGet(dataset,id,start,end){
+  const p=new URLSearchParams({dataset,start_date:start});
+  if(id)p.set("data_id",id);
+  if(end)p.set("end_date",end);
+  const r=await fetch(FM+"?"+p.toString());
+  const j=await r.json();
+  if(j.status!==200) throw new Error("FinMind："+(j.msg||("狀態 "+j.status)));
+  return j.data||[];
+}
+function pstdev(a){ if(!a.length)return 0; const m=a.reduce((x,y)=>x+y,0)/a.length; return Math.sqrt(a.reduce((s,v)=>s+(v-m)*(v-m),0)/a.length); }
+function bclamp(x,lo=0,hi=100){ return Math.max(lo,Math.min(hi,x)); }
+function shiftDays(iso,days){ const d=new Date(iso+"T00:00:00Z"); d.setUTCDate(d.getUTCDate()+days); return d.toISOString().slice(0,10); }
+function shiftYears(iso,y){ const p=iso.split("-"); return String(+p[0]+y).padStart(4,"0")+"-"+p[1]+"-"+p[2]; }
+function monthAvail(y,m,asof){ let ny=y,nm=m+1; if(nm>12){ny++;nm=1;} return (ny+"-"+String(nm).padStart(2,"0")+"-10")<=asof; } // 月營收約次月10日才公布
+
+async function backtest(code,asof){
+  const [taiex,price,per,rev]=await Promise.all([
+    fmGet("TaiwanStockPrice","TAIEX",shiftDays(asof,-620),asof),
+    fmGet("TaiwanStockPrice",code,shiftDays(asof,-40),asof),
+    fmGet("TaiwanStockPER",code,shiftDays(asof,-1835),asof),
+    fmGet("TaiwanStockMonthRevenue",code,shiftDays(asof,-470),asof),
+  ]);
+  const pr=price.filter(r=>r.date<=asof).sort((a,b)=>a.date<b.date?-1:1);
+  if(!pr.length) throw new Error("查無代號，或 "+asof+" 當時還沒有這檔的股價。");
+  // 市場恐慌度
+  const tx=taiex.filter(r=>r.date<=asof).sort((a,b)=>a.date<b.date?-1:1);
+  const closes=tx.map(r=>r.close);
+  if(closes.length<130) throw new Error("大盤資料不足（日期可能太早）。");
+  const c=closes[closes.length-1], ma120=closes.slice(-120).reduce((x,y)=>x+y,0)/120;
+  const bias=(c-ma120)/ma120*100;
+  const hi=Math.max(...(closes.length>=250?closes.slice(-250):closes)), dd=(c-hi)/hi*100;
+  const rets=[]; for(let i=1;i<closes.length;i++) rets.push(closes[i]/closes[i-1]-1);
+  const vol=pstdev(rets.slice(-20))*Math.sqrt(252)*100;
+  const mkf=Math.round(0.4*bclamp(50-bias*3.3)+0.3*bclamp(-dd*2.5)+0.3*bclamp((vol-12)/26*100));
+  const mtag= mkf>=65?"恐慌(機會)": mkf>=40?"中性":"貪婪(該收手)";
+  // PER 位階（近 5 年）
+  const cut=shiftDays(asof,-1825);   // 近 5 年＝1825 天，與 build_data.py 一致
+  const pp=per.filter(r=> r.date>=cut && r.date<=asof && r.PER!=null && r.PER!==0).sort((a,b)=>a.date<b.date?-1:1);
+  let perNow=null,pctl=null,pmin=null,pmed=null,pmax=null,valCheap=null;
+  if(pp.length){
+    const vals=pp.map(r=>r.PER); perNow=pp[pp.length-1].PER;
+    pctl=Math.round(vals.filter(v=>v<=perNow).length/vals.length*100);
+    const s2=[...vals].sort((a,b)=>a-b); pmin=s2[0]; pmed=s2[Math.floor(s2.length/2)]; pmax=s2[s2.length-1];
+    valCheap=100-pctl;
+  }
+  // 月營收 YoY（考慮公布落後）
+  const rv=rev.slice().sort((a,b)=>(a.revenue_year-b.revenue_year)||(a.revenue_month-b.revenue_month));
+  const idx={}; rv.forEach(r=> idx[r.revenue_year+"-"+r.revenue_month]=r.revenue);
+  const avail=rv.filter(r=> monthAvail(r.revenue_year,r.revenue_month,asof));
+  let yoy=null,ym=null,fund=null;
+  if(avail.length){
+    const last=avail[avail.length-1]; ym=last.revenue_year+"-"+String(last.revenue_month).padStart(2,"0");
+    const py=idx[(last.revenue_year-1)+"-"+last.revenue_month];
+    if(py){ yoy=Math.round((last.revenue-py)/py*1000)/10; fund=Math.round(bclamp(45+yoy*1.2)); }
+  }
+  let comp=null,label;
+  if(valCheap!=null){
+    comp=Math.round(0.40*valCheap+0.25*(fund!=null?fund:45)+0.35*mkf);
+    label= comp>=65?"窗口開(便宜+恐慌)": comp>=45?"半開(中性)":"窗口關(貴+貪婪)";
+  } else { label="無本益比(本夢比)，只能參考營收與大盤"; }
+  const r1=x=>x==null?null:Math.round(x*10)/10;
+  return {code, asof:pr[pr.length-1].date, px:pr[pr.length-1].close, mkf, mtag,
+          bias:r1(bias), dd:r1(dd), vol:r1(vol),
+          perNow: perNow==null?null:Math.round(perNow*100)/100, pctl, valCheap,
+          pmin:r1(pmin), pmed:r1(pmed), pmax:r1(pmax), ym, yoy, fund, comp, label};
+}
+
+function btRender(s,name){
+  const col= s.comp==null?"var(--muted)":compColor(s.comp);
+  const row=(k,v)=>`<div style="display:flex;justify-content:space-between;gap:12px;padding:4px 0;border-bottom:1px solid var(--line)"><span class="label">${k}</span><span style="font-variant-numeric:tabular-nums;text-align:right">${v}</span></div>`;
+  return `<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2px">
+      <b>${name||""} ${s.code}</b><span class="label">資料日 ${s.asof}</span></div>
+    <div style="font-size:1.9rem;font-weight:700;color:${col};line-height:1.1">${s.comp==null?"—":s.comp}<span class="label" style="font-size:.8rem;font-weight:400">／100　${s.label}</span></div>
+    <div style="margin-top:6px">
+      ${row("收盤價", s.px)}
+      ${row("市場恐慌度", s.mkf+"　"+s.mtag)}
+      ${row("　乖離120／距年高／20日波動", (s.bias>0?"+":"")+s.bias+"%　/　"+s.dd+"%　/　"+s.vol+"%")}
+      ${row("PER 本益比", s.perNow==null?"—（本夢比）":s.perNow)}
+      ${row("PER 位階（近5年）", s.pctl==null?"—":s.pctl+"%　區間 "+s.pmin+"~"+s.pmax+"（中位 "+s.pmed+"）")}
+      ${row("估值便宜度", s.valCheap==null?"—":s.valCheap)}
+      ${row("最新可得月營收 YoY", s.ym==null?"—":s.ym+"　"+(s.yoy==null?"—":(s.yoy>0?"+":"")+s.yoy+"%"))}
+      ${row("基本面", s.fund==null?"—":s.fund)}
+    </div>
+    <div class="label" style="margin-top:8px">同一套算法、只餵「當時」拿得到的資料。絕對股價會被配股扭曲，重點看「位階」。</div>`;
+}
+
+(function(){
+  const card=document.getElementById("btcard"); if(!card) return;
+  const codeI=card.querySelector("#btcode"), dateI=card.querySelector("#btdate"),
+        btn=card.querySelector("#btbtn"), out=card.querySelector("#btout");
+  const today=new Date().toISOString().slice(0,10);
+  dateI.max=today; if(!dateI.value) dateI.value="2026-01-31";
+  async function run(){
+    const code=(codeI.value||"").trim(), asof=dateI.value;
+    if(!/^\d{4,6}[A-Za-z]?$/.test(code)){ out.innerHTML='<span class="err">請輸入正確代號（如 6669）。</span>'; return; }
+    if(!asof){ out.innerHTML='<span class="err">請選一個日期。</span>'; return; }
+    out.innerHTML='<span class="label">計算中…（向 FinMind 拿歷史資料，約 1~3 秒）</span>';
+    try{
+      const s=await backtest(code,asof);
+      const known=(window.DATA&&window.DATA.stocks||[]).find(x=>x.code===code);
+      out.innerHTML=btRender(s, known?known.name:"");
+    }catch(e){ out.innerHTML='<span class="err">'+(e.message||"查詢失敗，請稍後再試")+'</span>'; }
+  }
+  btn.addEventListener("click",run);
+  codeI.addEventListener("keydown",e=>{ if(e.key==="Enter") run(); });
+  dateI.addEventListener("keydown",e=>{ if(e.key==="Enter") run(); });
+})();
+
 fetch("./data.json?_="+Date.now()).then(r=>r.json()).then(render).catch(()=>{
   document.getElementById("sub").innerHTML =
     '<span class="err">讀取 data.json 失敗</span>（本機請用 http 開啟，或等 GitHub Pages 上線）';
@@ -347,6 +478,7 @@ function render(d){
           <span>${term('val_cheap','估值便宜度')} <b>${esc(s.val_cheap)}</b></span>
           <span>${chartLink(s.code)} <b>${s.yoy>0?"+":""}${esc(s.yoy)}%</b></span>
           <span>${term('fund','基本面')} <b>${esc(s.fund)}</b></span>
+          <span>${btLink(s.code)}</span>
         </div>
         <div class="perbar"><div class="dot" style="left:${Math.max(3,Math.min(97,pos))}%"></div></div>
       </div>`);
