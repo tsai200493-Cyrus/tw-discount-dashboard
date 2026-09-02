@@ -1,0 +1,40 @@
+name: 更新打折窗口資料
+
+# 三種觸發：① 每個交易日收盤後排程 ② 你一改 watchlist 就重跑 ③ 手動按鈕
+on:
+  schedule:
+    - cron: "0 10 * * 1-5"      # 每週一~五 UTC 10:00（台灣 18:00，收盤後）
+  push:
+    paths:
+      - "watchlist.txt"          # 加/刪股票就自動重算
+  workflow_dispatch:             # Actions 頁面可手動 Run
+
+permissions:
+  contents: write                # 允許把新的 data.json 推回 repo
+
+concurrency:                     # 避免多次觸發互相打架
+  group: build-data
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 產生 docs/data.json
+        env:
+          FINMIND_TOKEN: ${{ secrets.FINMIND_TOKEN }}   # 在 repo Settings → Secrets 設定
+        run: python scripts/build_data.py
+
+      - name: 有變動才 commit + push
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/data.json
+          git diff --staged --quiet || git commit -m "chore: 更新打折窗口資料 [skip ci]"
+          git push

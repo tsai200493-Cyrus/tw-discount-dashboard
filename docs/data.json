@@ -1,0 +1,96 @@
+{
+  "generated_at": "2026-09-02T02:09:25+00:00",
+  "market": {
+    "score": 10,
+    "tag": "貪婪(該收手)",
+    "close": 46949,
+    "bias": 12.8,
+    "dd": -1.7,
+    "vol": 16.7,
+    "date": "2026-09-01",
+    "margin_note": "融資餘額 5781 億（2025-07-09 起 +160%）"
+  },
+  "stocks": [
+    {
+      "code": "2330",
+      "name": "台積電",
+      "price": 2440.0,
+      "per": 28.28,
+      "percentile": 82,
+      "per_min": 12.5,
+      "per_median": 23.4,
+      "per_max": 34.9,
+      "val_cheap": 18,
+      "yoy": 44.7,
+      "fund": 99,
+      "composite": 35,
+      "label": "窗口關(貴+貪婪)"
+    },
+    {
+      "code": "6669",
+      "name": "緯穎",
+      "price": 7800.0,
+      "per": 25.01,
+      "percentile": 87,
+      "per_min": 9.8,
+      "per_median": 18.1,
+      "per_max": 38.5,
+      "val_cheap": 13,
+      "yoy": 39.2,
+      "fund": 92,
+      "composite": 32,
+      "label": "窗口關(貴+貪婪)"
+    },
+    {
+      "code": "2382",
+      "name": "廣達",
+      "price": 342.0,
+      "per": 14.9,
+      "percentile": 40,
+      "per_min": 8.6,
+      "per_median": 15.9,
+      "per_max": 35.5,
+      "val_cheap": 60,
+      "yoy": 131.3,
+      "fund": 100,
+      "composite": 52,
+      "label": "半開(中性)"
+    },
+    {
+      "code": "3231",
+      "name": "緯創",
+      "price": 182.0,
+      "per": 14.46,
+      "percentile": 37,
+      "per_min": 6.1,
+      "per_median": 17.1,
+      "per_max": 36.9,
+      "val_cheap": 63,
+      "yoy": 60.8,
+      "fund": 100,
+      "composite": 54,
+      "label": "半開(中性)"
+    },
+    {
+      "code": "2412",
+      "name": "中華電",
+      "price": 136.0,
+      "per": 26.72,
+      "percentile": 66,
+      "per_min": 22.6,
+      "per_median": 26.3,
+      "per_max": 29.1,
+      "val_cheap": 34,
+      "yoy": 3.7,
+      "fund": 49,
+      "composite": 29,
+      "label": "窗口關(貴+貪婪)"
+    }
+  ],
+  "weights": {
+    "value": 0.4,
+    "fund": 0.25,
+    "market": 0.35
+  },
+  "disclaimer": "溫度計不是買賣訊號。沒有模型能可靠擇時；它只給情境傾向。非投資建議，決策與風險自負。"
+}
