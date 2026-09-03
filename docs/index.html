@@ -11,7 +11,7 @@
   :root{
     --bg:#f4f3ec; --panel:#faf9f4; --ink:#1d1b16; --muted:#6c665c; --line:#dcd7ca; --track:#e4dfd2;
     --accent:#2f4a3f; --open:#2f6d4f; --half:#946515; --shut:#9c3f37; --dream:#8a8478;
-    --cool:#3a6a7a; --hot:#b0564a; --barbg:#e4dfd2;
+    --cool:#3a6a7a; --hot:#b0564a; --barbg:#e4dfd2; --mkt:#efe9db; --mkt-line:#e0d9c5;
     --serif:"Newsreader",Georgia,"Noto Serif TC",serif;
     --sans:"Work Sans",-apple-system,"Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;
   }
@@ -19,7 +19,7 @@
     :root{
       --bg:#17150f; --panel:#201d16; --ink:#ece7dc; --muted:#9a9384; --line:#2f2b22; --track:#26221b;
       --accent:#8bb89b; --open:#5aa87d; --half:#c79a4e; --shut:#d1685f; --dream:#8f887a;
-      --cool:#6fa3b5; --hot:#d1685f; --barbg:#26221b;
+      --cool:#6fa3b5; --hot:#d1685f; --barbg:#26221b; --mkt:#221d13; --mkt-line:#39321f;
     }
   }
   *{box-sizing:border-box}
@@ -42,7 +42,8 @@
   .pxlink{cursor:pointer}
 
   /* 市場恐慌度卡（B） */
-  .mktcard{border-bottom:1px solid var(--line);padding:4px 2px 20px;margin-bottom:2px}
+  .mktcard{background:var(--mkt);border:1px solid var(--mkt-line);border-radius:14px;
+    padding:16px;margin-bottom:18px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
   .mkt-score{font-family:var(--serif);font-weight:500;font-size:3rem;line-height:1}
   .mkt-tag{font-size:.92rem;font-weight:600;margin-left:8px}
   .thermo{height:10px;border-radius:6px;margin:12px 0 6px;position:relative;
