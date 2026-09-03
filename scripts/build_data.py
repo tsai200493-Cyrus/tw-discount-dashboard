@@ -143,12 +143,26 @@ def revenue_data(code):
     return {"latest_yoy": hist[-1]["yoy"], "history": hist[-36:]}
 
 
-def latest_close(code):
-    start = (dt.date.today() - dt.timedelta(days=14)).isoformat()
+def price_series(code):
+    """近 ~130 天日收盤：最新收盤 + 近 65 筆（現價火花線用）。"""
+    start = (dt.date.today() - dt.timedelta(days=130)).isoformat()
     rows = _get("TaiwanStockPrice", code, start)
     if isinstance(rows, dict) or not rows:
         return None
-    return sorted(rows, key=lambda x: x["date"])[-1].get("close")
+    rows = sorted(rows, key=lambda x: x["date"])
+    closes = [round(r["close"], 2) for r in rows]
+    return {"last": closes[-1], "spark": closes[-65:]}
+
+
+def load_thesis():
+    """thesis.json：{code: {thesis, brk}}，由需求人自行編輯；沒有就回空。"""
+    p = ROOT / "thesis.json"
+    if p.exists():
+        try:
+            return json.loads(p.read_text(encoding="utf-8"))
+        except Exception:  # noqa: BLE001
+            return {}
+    return {}
 
 
 def window_label(score):
@@ -162,13 +176,15 @@ def window_label(score):
 def build_stock(code, name, mkf):
     per = per_band(code)
     rd = revenue_data(code)
-    price = latest_close(code)
+    ps = price_series(code)
+    price = ps["last"] if ps else None
+    spark = ps["spark"] if ps else None              # 近65日收盤（火花線）
     yoy = rd["latest_yoy"] if rd else None          # 單月 YoY（計分＋顯示）
     history = rd["history"] if rd else None          # 近36月明細（圖表用）
     if per is None:  # 無本益比 → 本夢比，排除評分
         return {"code": code, "name": name, "price": price, "per": None,
                 "percentile": None, "val_cheap": None, "yoy": yoy,
-                "revenue_history": history, "fund": None,
+                "revenue_history": history, "spark": spark, "fund": None,
                 "composite": None, "label": "資料不足(本夢比)"}
     val_cheap = 100 - per["percentile"]
     fund = None if yoy is None else round(clamp(45 + yoy * 1.2))
@@ -178,18 +194,24 @@ def build_stock(code, name, mkf):
             "percentile": per["percentile"], "per_min": per["min"],
             "per_median": per["median"], "per_max": per["max"],
             "val_cheap": val_cheap, "yoy": yoy, "revenue_history": history,
-            "fund": fund, "composite": composite, "label": window_label(composite)}
+            "spark": spark, "fund": fund, "composite": composite,
+            "label": window_label(composite)}
 
 
 def main():
     mk = market_fear()
     mkf = mk.get("score", 50)
     stocks = []
+    thesis = load_thesis()
     for code, name in load_watchlist():
         try:
-            stocks.append(build_stock(code, name, mkf))
+            st_ = build_stock(code, name, mkf)
         except Exception as exc:  # noqa: BLE001 — 單檔失敗不拖垮整批
-            stocks.append({"code": code, "name": name, "label": f"抓取失敗: {exc}"})
+            st_ = {"code": code, "name": name, "label": f"抓取失敗: {exc}"}
+        t = thesis.get(code) or {}
+        st_["thesis"] = t.get("thesis", "")
+        st_["brk"] = t.get("brk", "")
+        stocks.append(st_)
     data = {
         "generated_at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
         "market": mk,

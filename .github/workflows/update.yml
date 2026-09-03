@@ -7,6 +7,8 @@ on:
   push:
     paths:
       - "watchlist.txt"          # 加/刪股票就自動重算
+      - "thesis.json"            # 改論點就重算（把新論點帶進 data.json）
+      - "scripts/**"             # 改算法（build_data.py）就自動重算
   workflow_dispatch:             # Actions 頁面可手動 Run
 
 permissions:
