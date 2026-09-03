@@ -173,19 +173,90 @@ def window_label(score):
     return "窗口關(貴+貪婪)"
 
 
+# ── 財務指紋（品質）：損益表單季→年度加總；資產負債表取年底母公司權益 ──
+def _q_income_by_year(fs_rows):
+    keep = {"Revenue", "GrossProfit", "OperatingIncome", "IncomeAfterTaxes"}
+    by_year, qcount = {}, {}
+    for r in fs_rows:
+        t = r.get("type")
+        if t not in keep:
+            continue
+        y = int(r["date"][:4])
+        by_year.setdefault(y, {})
+        by_year[y][t] = by_year[y].get(t, 0.0) + (r.get("value") or 0.0)
+        qcount.setdefault(y, set()).add(r["date"][5:7])
+    return by_year, {y: len(q) for y, q in qcount.items()}
+
+
+def _q_equity_by_year(bs_rows):
+    last = {}
+    for r in bs_rows:
+        y = int(r["date"][:4])
+        if r["date"] > last.get(y, ""):
+            last[y] = r["date"]
+    out = {}
+    for r in bs_rows:
+        y = int(r["date"][:4])
+        if r["date"] == last[y] and r.get("type") == "EquityAttributableToOwnersOfParent":
+            out[y] = r.get("value") or 0.0
+    return out
+
+
+def quality_fingerprint(code):
+    """近幾完整年的 ROE 水準 ＋ 毛利率穩定度 ＋ 營益率，衡量「是不是好生意」。
+    與『基本面(短期營收動能)』互補；刻意不併入綜合窗口。抓不到回 None。"""
+    start = f"{dt.date.today().year - 6}-01-01"
+    fs = _get("TaiwanStockFinancialStatements", code, start)
+    if isinstance(fs, dict) or not fs:
+        return None
+    bs = _get("TaiwanStockBalanceSheet", code, start)
+    inc, qc = _q_income_by_year(fs)
+    eq = _q_equity_by_year(bs) if isinstance(bs, list) else {}
+    yrs = [y for y in sorted(inc) if qc.get(y, 0) >= 4][-5:]  # 只用四季齊全的完整年
+    if len(yrs) < 2:
+        return None
+    roe, gm, om, loss = [], [], [], False
+    for y in yrs:
+        rev = inc[y].get("Revenue", 0.0)
+        ni = inc[y].get("IncomeAfterTaxes", 0.0)
+        if rev:
+            gm.append(inc[y].get("GrossProfit", 0.0) / rev * 100)
+            om.append(inc[y].get("OperatingIncome", 0.0) / rev * 100)
+        e = eq.get(y)
+        if e:
+            roe.append(ni / e * 100)
+        if ni < 0:
+            loss = True
+    if not roe or not gm:
+        return None
+    roe_avg, gm_avg, om_avg = sum(roe) / len(roe), sum(gm) / len(gm), sum(om) / len(om)
+    gm_std = st.pstdev(gm) if len(gm) > 1 else 0.0
+    s_roe = clamp((roe_avg - 5) / 20 * 100)     # ROE 5%→0、25%+→100（護城河主要指紋）
+    s_stab = clamp(100 - gm_std * 8)            # 毛利率越穩越高（定價權）
+    s_op = clamp(om_avg / 20 * 100)             # 營益率水準
+    score = round(0.5 * s_roe + 0.25 * s_stab + 0.25 * s_op)
+    if loss:                                    # 近年有虧損 → 品質封頂
+        score = min(score, 50)
+    word = ("頂級" if score >= 80 else "優" if score >= 65 else
+            "中上" if score >= 50 else "普通" if score >= 35 else "偏弱")
+    return {"score": score, "word": word, "roe": round(roe_avg, 1),
+            "gm": round(gm_avg, 1), "om": round(om_avg, 1), "years": len(yrs)}
+
+
 def build_stock(code, name, mkf):
     per = per_band(code)
     rd = revenue_data(code)
     ps = price_series(code)
     price = ps["last"] if ps else None
     spark = ps["spark"] if ps else None              # 近65日收盤（火花線）
+    quality = quality_fingerprint(code)              # 財務指紋（品質），與綜合窗口分開
     yoy = rd["latest_yoy"] if rd else None          # 單月 YoY（計分＋顯示）
     history = rd["history"] if rd else None          # 近36月明細（圖表用）
     if per is None:  # 無本益比 → 本夢比，排除評分
         return {"code": code, "name": name, "price": price, "per": None,
                 "percentile": None, "val_cheap": None, "yoy": yoy,
-                "revenue_history": history, "spark": spark, "fund": None,
-                "composite": None, "label": "資料不足(本夢比)"}
+                "revenue_history": history, "spark": spark, "quality": quality,
+                "fund": None, "composite": None, "label": "資料不足(本夢比)"}
     val_cheap = 100 - per["percentile"]
     fund = None if yoy is None else round(clamp(45 + yoy * 1.2))
     composite = round(W_VALUE * val_cheap + W_FUND * (fund if fund is not None else 45)
@@ -194,7 +265,7 @@ def build_stock(code, name, mkf):
             "percentile": per["percentile"], "per_min": per["min"],
             "per_median": per["median"], "per_max": per["max"],
             "val_cheap": val_cheap, "yoy": yoy, "revenue_history": history,
-            "spark": spark, "fund": fund, "composite": composite,
+            "spark": spark, "quality": quality, "fund": fund, "composite": composite,
             "label": window_label(composite)}
 
 

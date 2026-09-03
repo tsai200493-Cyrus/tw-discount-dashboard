@@ -86,6 +86,8 @@
   .d-k{color:var(--muted)}
   .d-v{color:var(--ink);font-variant-numeric:tabular-nums;font-weight:500}
   .d-v.pos{color:var(--open)} .d-v.neg{color:var(--shut)}
+  .meter{letter-spacing:2px;font-size:.72rem;margin-right:5px}
+  .qtag{font-size:.68rem;padding:0 6px;border-radius:4px;border:1px solid var(--accent);color:var(--accent);margin-left:3px}
   .perbar{height:5px;border-radius:4px;background:var(--track);position:relative;margin-top:12px}
   .perbar .dot{position:absolute;top:-3.5px;width:12px;height:12px;border-radius:50%;
     background:var(--ink);border:2px solid var(--bg);transform:translateX(-50%)}
@@ -222,9 +224,16 @@
 <script>
 const GLOSSARY = {
   market:"市場恐慌度：全大盤共用。高＝大家在恐慌（折扣容易出現）；低＝大家貪婪、追高危險。用大盤乖離／回檔／波動算，不用位階（多頭趨勢會失真）。",
-  composite:"綜合窗口：0.40×估值便宜 ＋ 0.25×基本面 ＋ 0.35×市場恐慌。≥65 窗口開（便宜＋恐慌）｜45–64 半開｜<45 窗口關（貴＋貪婪）。這是情境傾向，不是買賣訊號。",
+  composite:`衡量「現在貴不貴／時機」，三塊加權：<br>
+    <span style="font-variant-numeric:tabular-nums">0.40×估值便宜　＋　0.25×基本面　＋　0.35×市場恐慌</span>
+    <div style="margin:9px 0 7px;border-top:1px solid var(--line)"></div>
+    <span style="color:var(--open)">●</span> <b>≥65</b>　窗口開（便宜＋恐慌）<br>
+    <span style="color:var(--half)">●</span> <b>45–64</b>　半開（中性）<br>
+    <span style="color:var(--shut)">●</span> <b>&lt;45</b>　窗口關（貴＋貪婪）
+    <div class="label" style="margin-top:9px">這是情境傾向，不是買賣訊號。</div>`,
   val_cheap:"估值便宜度：這檔的本益比，站在它自己過去 5 年的高低位置。越低（越接近自己的便宜區）分數越高（＝100 − 本益比位階）。回答「相對它自己，現在便宜還貴」。",
   fund:"基本面：公司賺不賺錢、在成長還衰退。用最新月營收年增率（YoY）換算，成長越猛分數越高。單月有雜訊，想看趨勢就點「營收動能📊」看歷年圖。",
+  quality:"財務指紋（品質）：這是不是一門「好生意」——用近幾完整年的 ROE（股東權益報酬率）＋毛利率水準與穩定度＋營益率算，滿分 100。跟「基本面」互補：基本面看『營收現在衝不衝』（短期動能），品質看『賺錢賺得久不久、穩不穩』（長期體質）。⚠️ 刻意不併入綜合窗口——它回答『該不該擁有』，不是『現在貴不貴』。",
   per:"PER（本益比）：股價 ÷ 每股盈餘。買一塊錢的獲利要付幾塊，數字越大＝買得越貴。",
   pctl:"位階：現在的本益比，站在它自己過去 5 年由低到高的第幾個百分點。越低＝越接近它自己的便宜區。",
 };
@@ -253,6 +262,13 @@ function sparkSVG(arr){
     <circle class="ping" cx="${lx}" cy="${ly}" r="4" fill="${col}"/>
     <circle class="dot" cx="${lx}" cy="${ly}" r="4" fill="${col}"/>
   </svg>`;
+}
+// 財務指紋（品質）：5 顆圓點 ＋ 分數 ＋ 一句評等
+function qMeter(q){
+  if(!q || q.score==null) return '<span style="color:var(--muted)">—（資料不足）</span>';
+  const f=Math.round(q.score/20); let dots="";
+  for(let i=0;i<5;i++) dots+=`<span style="color:${i<f?'var(--open)':'var(--line)'}">●</span>`;
+  return `<span class="meter">${dots}</span>${q.score} <span class="qtag">${q.word}</span>`;
 }
 // 論點卡（有填→展開你寫的；沒填→提示去 thesis.json 補）
 function thesisHTML(s){
@@ -856,6 +872,7 @@ function render(d){
           <div class="d-item"><span class="d-k">${term('val_cheap','估值便宜度')}</span><span class="d-v">${esc(s.val_cheap)}</span></div>
           <div class="d-item"><span class="d-k">${chartLink(s.code)}</span><span class="d-v ${yoyCls}">${yoyTxt}</span></div>
           <div class="d-item"><span class="d-k">${term('fund','基本面')}</span><span class="d-v">${esc(s.fund)}</span></div>
+          <div class="d-item full"><span class="d-k">${term('quality','財務指紋（品質）')}</span><span class="d-v">${qMeter(s.quality)}</span></div>
         </div>
         <div class="perbar"><div class="dot" style="left:${Math.max(3,Math.min(97,pos))}%"></div></div>
         <div class="perbar-cap">本益比位階（越左＝越接近自己的便宜區）</div>
