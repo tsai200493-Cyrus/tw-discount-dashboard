@@ -28,7 +28,7 @@ API = "https://api.finmindtrade.com/api/v4/data"
 TOKEN = os.environ.get("FINMIND_TOKEN", "")
 ROOT = Path(__file__).resolve().parents[1]
 
-# 綜合窗口權重（透明、未回測調參；故意笨而誠實，避免過度擬合）
+# 進場時機權重（透明、未回測調參；故意笨而誠實，避免過度擬合）
 W_VALUE, W_FUND, W_MARKET = 0.40, 0.25, 0.35
 
 
@@ -167,10 +167,10 @@ def load_thesis():
 
 def window_label(score):
     if score >= 65:
-        return "窗口開(便宜+恐慌)"
+        return "時機佳（便宜＋恐慌）"
     if score >= 45:
-        return "半開(中性)"
-    return "窗口關(貴+貪婪)"
+        return "普通（中性）"
+    return "時機差（貴＋貪婪）"
 
 
 # ── 財務指紋（品質）：損益表單季→年度加總；資產負債表取年底母公司權益 ──
@@ -204,7 +204,7 @@ def _q_equity_by_year(bs_rows):
 
 def quality_fingerprint(code):
     """近幾完整年的 ROE 水準 ＋ 毛利率穩定度 ＋ 營益率，衡量「是不是好生意」。
-    與『基本面(短期營收動能)』互補；刻意不併入綜合窗口。抓不到回 None。"""
+    與『基本面(短期營收動能)』互補；刻意不併入進場時機。抓不到回 None。"""
     start = f"{dt.date.today().year - 6}-01-01"
     fs = _get("TaiwanStockFinancialStatements", code, start)
     if isinstance(fs, dict) or not fs:
@@ -249,7 +249,7 @@ def build_stock(code, name, mkf):
     ps = price_series(code)
     price = ps["last"] if ps else None
     spark = ps["spark"] if ps else None              # 近65日收盤（火花線）
-    quality = quality_fingerprint(code)              # 財務指紋（品質），與綜合窗口分開
+    quality = quality_fingerprint(code)              # 財務指紋（品質），與進場時機分開
     yoy = rd["latest_yoy"] if rd else None          # 單月 YoY（計分＋顯示）
     history = rd["history"] if rd else None          # 近36月明細（圖表用）
     if per is None:  # 無本益比 → 本夢比，排除評分
