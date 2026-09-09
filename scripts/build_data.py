@@ -90,19 +90,50 @@ def market_fear():
     f_vol = clamp((vol - 12) / 26 * 100)
     score = round(0.4 * f_bias + 0.3 * f_dd + 0.3 * f_vol)
 
-    margin_note = ""
-    mg = _get("TaiwanStockTotalMarginPurchaseShortSale", None, start)
-    if isinstance(mg, list):
-        mg = sorted([r for r in mg if r.get("name") == "MarginPurchaseMoney"],
-                    key=lambda x: x["date"])
-        if len(mg) >= 2:
-            chg = (mg[-1]["TodayBalance"] / mg[0]["TodayBalance"] - 1) * 100
-            margin_note = f"融資餘額 {mg[-1]['TodayBalance']/1e8:.0f} 億（{mg[0]['date']} 起 {chg:+.0f}%）"
+    margin_note = margin_context()
 
     tag = "恐慌(機會)" if score >= 65 else "中性" if score >= 40 else "貪婪(該收手)"
     return {"score": score, "tag": tag, "close": round(c), "bias": round(bias, 1),
             "dd": round(dd, 1), "vol": round(vol, 1), "date": rows[-1]["date"],
             "margin_note": margin_note}
+
+
+def margin_context():
+    """融資餘額：近一年位階 ＋ 近一月變化。純顯示、不進任何分數。
+
+    ［決策 2026-09-09｜需求人］不用「距某個基準日 +N%」的講法。
+      前提：基準日若跟著產出日往前滑，百分比會混進「基準自己在動」的雜訊。
+        實例：2026-09-03→09-09，融資餘額只從 5857 億變 5863 億（+0.1%），
+        但舊寫法顯示的數字從 +161% 掉到 +158%，看起來像降溫、方向還是反的。
+      已知代價：位階需要一整年的樣本，上市未滿一年或 FinMind 缺資料時就顯示不出來。
+      ⇒ 排錯線索：這裡刻意「自己抓自己的區間」，不要再共用 market_fear() 的 start
+        （舊版就是沿用那個 420 天視窗，才讓基準日變成沒有意義的『420 天前』）。
+    """
+    start = (dt.date.today() - dt.timedelta(days=400)).isoformat()
+    rows = _get("TaiwanStockTotalMarginPurchaseShortSale", None, start)
+    if isinstance(rows, dict):
+        return ""
+    rows = sorted([r for r in rows if r.get("name") == "MarginPurchaseMoney"],
+                  key=lambda x: x["date"])
+    rows = [r for r in rows if r.get("TodayBalance")]
+    if len(rows) < 60:
+        return ""
+    last = rows[-1]
+    cut = (dt.date.fromisoformat(last["date"]) - dt.timedelta(days=365)).isoformat()
+    win = [r["TodayBalance"] / 1e8 for r in rows if r["date"] >= cut]
+    if len(win) < 200:          # 一年約 240 個交易日；樣本不足就別謊稱「近一年位階」
+        return ""
+    now = last["TodayBalance"] / 1e8
+    pctl = round(sum(1 for v in win if v <= now) / len(win) * 100)
+    # 用 " · " 分段，前端會拆成獨立區塊各自換行（不然「位階」和「91%」會被拆兩行）
+    note = f"融資餘額 {now:.0f} 億 · 近一年位階 {pctl}%（{min(win):.0f}–{max(win):.0f}）"
+
+    m1 = (dt.date.fromisoformat(last["date"]) - dt.timedelta(days=30)).isoformat()
+    prior = [r for r in rows if r["date"] <= m1]
+    if prior and prior[-1]["TodayBalance"]:
+        chg = (last["TodayBalance"] / prior[-1]["TodayBalance"] - 1) * 100
+        note += f" · 近一月 {chg:+.0f}%"
+    return note
 
 
 def per_band(code):
@@ -163,6 +194,31 @@ def load_thesis():
         except Exception:  # noqa: BLE001
             return {}
     return {}
+
+
+def load_prev(mk_date):
+    """讀「上一份」docs/data.json，取出各檔 composite 與市場分數，供網站顯示 ▲▼ 變化量。
+
+    同一交易日重跑（例如改了 watchlist 觸發 Action）時，沿用舊檔自己的 prev，
+    不要拿「今天早上的自己」當基準——否則變化量會被洗成 0，等於失去昨天的比較點。
+    抓不到就回空的，前端會自動不顯示變化量。
+    """
+    p = ROOT / "docs" / "data.json"
+    if not p.exists():
+        return {}
+    try:
+        old = json.loads(p.read_text(encoding="utf-8"))
+    except Exception:  # noqa: BLE001 — 舊檔壞掉不該擋住這次產出
+        return {}
+    old_date = (old.get("market") or {}).get("date")
+    if old_date and mk_date and old_date == mk_date:
+        return old.get("prev") or {}
+    return {
+        "date": old_date,
+        "market": (old.get("market") or {}).get("score"),
+        "stocks": {s["code"]: s["composite"] for s in old.get("stocks", [])
+                   if s.get("code") and s.get("composite") is not None},
+    }
 
 
 def window_label(score):
@@ -272,6 +328,7 @@ def build_stock(code, name, mkf):
 def main():
     mk = market_fear()
     mkf = mk.get("score", 50)
+    prev = load_prev(mk.get("date"))   # 先讀，等一下才會覆寫 data.json
     stocks = []
     thesis = load_thesis()
     for code, name in load_watchlist():
@@ -286,6 +343,7 @@ def main():
     data = {
         "generated_at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
         "market": mk,
+        "prev": prev,
         "stocks": stocks,
         "weights": {"value": W_VALUE, "fund": W_FUND, "market": W_MARKET},
         "disclaimer": "溫度計不是買賣訊號。沒有模型能可靠擇時；它只給情境傾向。非投資建議，決策與風險自負。",
@@ -293,7 +351,9 @@ def main():
     out = ROOT / "docs" / "data.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"wrote {out}  (市場恐慌 {mkf}, {len(stocks)} 檔, token={'yes' if TOKEN else 'no'})")
+    base = prev.get("date") or "無（第一次產出）"
+    print(f"wrote {out}  (市場恐慌 {mkf}, {len(stocks)} 檔, 變化量基準 {base}, "
+          f"token={'yes' if TOKEN else 'no'})")
 
 
 if __name__ == "__main__":
