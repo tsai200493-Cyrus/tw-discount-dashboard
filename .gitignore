@@ -2,3 +2,7 @@ __pycache__/
 *.pyc
 .venv/
 .DS_Store
+
+# 警鈴的暫存檔（只在 Action 執行當下存在）
+alert_title.txt
+alert_body.md
