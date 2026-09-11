@@ -75,11 +75,13 @@ def build_body(mk, level, name, stocks, last_65):
                     key=lambda s: -s["composite"])[:4]
     if ranked:
         lines += ["", "### 追蹤清單當下排序（進場時機高＝相對便宜）", "",
-                  "| 代號 | 名稱 | 股價 | PER 位階 | 進場時機 | 標籤 |", "|---|---|---|---|---|---|"]
+                  "| 代號 | 名稱 | 股價 | 估值位階 | 進場時機 | 標籤 |", "|---|---|---|---|---|---|"]
         for s in ranked:
+            # 虧損過的股票會自動改用 PBR 算位階（見 build_data.value_band），標出來才不會誤讀
+            m = "PBR" if s.get("metric") == "pbr" else "PER"
             lines.append(
                 f"| {s['code']} | {s['name']} | {s.get('price')} | "
-                f"{s.get('percentile')}% | **{s['composite']}** | {s.get('label', '')} |")
+                f"{m} {s.get('metric_pctl')}% | **{s['composite']}** | {s.get('label', '')} |")
 
     lines += [
         "",

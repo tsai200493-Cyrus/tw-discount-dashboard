@@ -34,6 +34,7 @@ W_VALUE, W_FUND, W_MARKET = 0.40, 0.25, 0.35
 
 PER_DEFAULT_DAYS = 1825    # 本益比位階的預設比較區間（近 5 年）
 PER_MIN_SAMPLES = 200      # 自訂區間的樣本下限（一年約 245 個交易日），不足就退回預設
+PER_MIN_COVERAGE = 0.85    # 區間內「有本益比」的交易日比例；低於此改用股價淨值比
 SINCE_RE = re.compile(r"@since=(\d{4})-(\d{2})(?:-(\d{2}))?")
 
 
@@ -174,35 +175,61 @@ def margin_context():
     return note
 
 
-def per_band(code, since=None):
-    """本益比位階。since 有給就從那天起算，否則用預設的近 5 年。
+def value_band(code, since=None):
+    """估值位階。預設用本益比（PER）；PER 覆蓋率太低時自動改用股價淨值比（PBR）。
 
-    樣本不足 PER_MIN_SAMPLES 就退回預設區間並警告——樣本太少的百分位是雜訊。
-    回傳的 since 是「實際生效」的起算日；退回預設時為 None，前端才不會標錯。
+    ［決策 2026-09-11｜需求人］換不換尺看「資料覆蓋率」，不看「數值極不極端」。
+      前提：公司虧損時 FinMind 的 PER 是空值，而缺的那段正是景氣循環的谷底。
+        於是「五年位階」實際上只跟「有賺錢的那半個循環」比，會把循環頂部誤讀成便宜。
+        實測 2026-09-11 覆蓋率：德宏 30%、南亞科 49%、群創 54%、富喬 63%，其餘六檔 100%。
+        淨值不會趨近 0，這四檔的 PBR 覆蓋率都是 100%，所以 PBR 是還能用的那把尺。
+        （不用「PER 最大值／中位數」之類的極端度判準：那會把「股價真的漲很多」
+        誤判成「儀器壞了」——南亞科 PBR 0.48→8.11 是真實漲幅，不是資料問題。）
+      已知代價：PBR 位階在多頭趨勢裡會單向偏高（淨值增長慢、股價漲得快），
+        換成 PBR 的股票會普遍顯得貴。這跟 market_fear() 當初決定「不用位階」
+        是同一個毛病；這裡沒有更好的替代品，但總比拿半個循環當基準好。
+      ⇒ 排錯線索：某檔便宜度突然大變，先看卡片標的是 PER 還是 PBR，
+        以及覆蓋率是不是剛好跨過 85% 門檻。
+
+    TaiwanStockPER 這支 API 同時回 PER 與 PBR，換尺不用多打一次。
     """
     default_start = (dt.date.today() - dt.timedelta(days=PER_DEFAULT_DAYS)).isoformat()
     rows = _get("TaiwanStockPER", code, min(since, default_start) if since else default_start)
     if isinstance(rows, dict) or not rows:
         return None
     rows = sorted(rows, key=lambda x: x["date"])
-    good = [r for r in rows if r.get("PER") not in (None, 0)]
-    if not good:
-        return None
-    now = good[-1]["PER"]          # 取最後一筆「有效」的，不是最後一筆（那筆可能是 0/None）
 
-    start, eff = (since or default_start), since
-    vals = [r["PER"] for r in good if r["date"] >= start]
-    if since and len(vals) < PER_MIN_SAMPLES:
-        print(f"::warning::{code} 自 {since} 起只有 {len(vals)} 筆本益比"
+    start, eff_since = (since or default_start), since
+    win = [r for r in rows if r["date"] >= start]
+    if since and len(win) < PER_MIN_SAMPLES:
+        print(f"::warning::{code} 自 {since} 起只有 {len(win)} 個交易日"
               f"（低於 {PER_MIN_SAMPLES}），退回近 5 年")
-        start, eff = default_start, None
-        vals = [r["PER"] for r in good if r["date"] >= start]
-    if not vals:
+        start, eff_since = default_start, None
+        win = [r for r in rows if r["date"] >= start]
+    if not win:
         return None
+
+    n_per = sum(1 for r in win if r.get("PER"))
+    cov = n_per / len(win)
+    metric, why = "per", None
+    if cov < PER_MIN_COVERAGE:
+        metric = "pbr"
+        why = (f"區間內只有 {cov * 100:.0f}% 的交易日有本益比"
+               f"（虧損時沒有），改用股價淨值比")
+        print(f"::notice::{code} 本益比覆蓋率 {cov * 100:.0f}% → 改用 PBR 算位階")
+
+    key = "PER" if metric == "per" else "PBR"
+    vals = [r[key] for r in win if r.get(key)]
+    if len(vals) < PER_MIN_SAMPLES:
+        return None
+    now = vals[-1]
     below = sum(1 for v in vals if v <= now)
-    return {"now": round(now, 2), "percentile": round(below / len(vals) * 100),
-            "min": round(min(vals), 1), "median": round(sorted(vals)[len(vals) // 2], 1),
-            "max": round(max(vals), 1), "since": eff, "n": len(vals)}
+    nd = 2 if metric == "pbr" else 1          # PBR 小數點後兩位才看得出差別
+    return {"metric": metric, "why": why, "now": round(now, 2),
+            "pctl": round(below / len(vals) * 100),
+            "min": round(min(vals), nd), "median": round(sorted(vals)[len(vals) // 2], nd),
+            "max": round(max(vals), nd),
+            "since": eff_since, "n": len(vals), "coverage": round(cov * 100)}
 
 
 def revenue_data(code):
@@ -353,7 +380,7 @@ def quality_fingerprint(code):
 
 
 def build_stock(code, name, mkf, since=None, why=None):
-    per = per_band(code, since)
+    vb = value_band(code, since)
     rd = revenue_data(code)
     ps = price_series(code)
     price = ps["last"] if ps else None
@@ -361,20 +388,20 @@ def build_stock(code, name, mkf, since=None, why=None):
     quality = quality_fingerprint(code)              # 財務指紋（品質），與進場時機分開
     yoy = rd["latest_yoy"] if rd else None          # 單月 YoY（計分＋顯示）
     history = rd["history"] if rd else None          # 近36月明細（圖表用）
-    if per is None:  # 無本益比 → 本夢比，排除評分
-        return {"code": code, "name": name, "price": price, "per": None,
-                "percentile": None, "val_cheap": None, "yoy": yoy,
+    if vb is None:  # 估值算不出來 → 本夢比，排除評分
+        return {"code": code, "name": name, "price": price, "metric": None,
+                "metric_val": None, "metric_pctl": None, "val_cheap": None, "yoy": yoy,
                 "revenue_history": history, "spark": spark, "quality": quality,
                 "fund": None, "composite": None, "label": "資料不足(本夢比)"}
-    val_cheap = 100 - per["percentile"]
+    val_cheap = 100 - vb["pctl"]
     fund = None if yoy is None else round(clamp(45 + yoy * 1.2))
     composite = round(W_VALUE * val_cheap + W_FUND * (fund if fund is not None else 45)
                       + W_MARKET * mkf)
-    return {"code": code, "name": name, "price": price, "per": per["now"],
-            "percentile": per["percentile"], "per_min": per["min"],
-            "per_median": per["median"], "per_max": per["max"],
-            "per_since": per["since"], "per_why": why if per["since"] else None,
-            "per_n": per["n"],
+    return {"code": code, "name": name, "price": price,
+            "metric": vb["metric"], "metric_val": vb["now"], "metric_pctl": vb["pctl"],
+            "metric_min": vb["min"], "metric_median": vb["median"], "metric_max": vb["max"],
+            "metric_why": vb["why"], "metric_cov": vb["coverage"], "metric_n": vb["n"],
+            "metric_since": vb["since"], "since_why": why if vb["since"] else None,
             "val_cheap": val_cheap, "yoy": yoy, "revenue_history": history,
             "spark": spark, "quality": quality, "fund": fund, "composite": composite,
             "label": window_label(composite)}

@@ -286,11 +286,12 @@ const GLOSSARY = {
     <span style="color:var(--half)">●</span> <b>45–64</b>　普通（中性）<br>
     <span style="color:var(--shut)">●</span> <b>&lt;45</b>　時機差（貴＋貪婪）
     <div class="label" style="margin-top:9px">這是情境傾向，不是買賣訊號。</div>`,
-  val_cheap:"估值便宜度：這檔的本益比，站在它自己比較區間的高低位置。越低（越接近自己的便宜區）分數越高（＝100 − 本益比位階）。回答「相對它自己，現在便宜還貴」。比較區間預設近 5 年。",
+  val_cheap:"估值便宜度：這檔的估值（本益比，或虧損過的股票用股價淨值比），站在它自己比較區間的高低位置。越低（越接近自己的便宜區）分數越高（＝100 − 位階）。回答「相對它自己，現在便宜還貴」。比較區間預設近 5 年。",
   fund:"基本面：公司賺不賺錢、在成長還衰退。用最新月營收年增率（YoY）換算，成長越猛分數越高。單月有雜訊，想看趨勢就點「營收動能📊」看歷年圖。",
   quality:"財務指紋（品質）：這是不是一門「好生意」——用近幾完整年的 ROE（股東權益報酬率）＋毛利率水準與穩定度＋營益率算，滿分 100。跟「基本面」互補：基本面看『營收現在衝不衝』（短期動能），品質看『賺錢賺得久不久、穩不穩』（長期體質）。⚠️ 刻意不併入進場時機——它回答『該不該擁有』，不是『現在時機好不好』。",
   per:"PER（本益比）：股價 ÷ 每股盈餘。買一塊錢的獲利要付幾塊，數字越大＝買得越貴。",
-  pctl:"位階：現在的本益比，站在它自己比較區間由低到高的第幾個百分點。越低＝越接近它自己的便宜區。<br><br>比較區間<b>預設近 5 年</b>；業態真的變過、舊資料不可比的股票，可以在 <code>watchlist.txt</code> 逐檔改起算日（<code>@since=2023-01 理由</code>，理由必填），卡片上會標出來。<br><b>少調它</b>——縮短區間的實際效果是刪掉低估值年代，會讓幾乎每一檔都變便宜。",
+  pbr:"PBR（股價淨值比）：股價 ÷ 每股淨值。買一塊錢的資產要付幾塊，數字越大＝買得越貴。<br><br>這檔改用 PBR，是因為它<b>虧損過</b>——公司虧錢時沒有本益比（分母是負的或趨近 0），那段日子的 PER 在資料裡是空的。如果照樣用 PER 算位階，等於「只跟有賺錢的那半個循環比」，會把景氣頂部誤讀成便宜。淨值不會消失，所以改用 PBR。",
+  pctl:"位階：現在的估值，站在它自己比較區間由低到高的第幾個百分點。越低＝越接近它自己的便宜區。<br><br>比較區間<b>預設近 5 年</b>；業態真的變過、舊資料不可比的股票，可以在 <code>watchlist.txt</code> 逐檔改起算日（<code>@since=2023-01 理由</code>，理由必填），卡片上會標出來。<br><b>少調它</b>——縮短區間的實際效果是刪掉低估值年代，會讓幾乎每一檔都變便宜。",
 };
 const term=(k,t)=>`<span class="term" data-k="${k}">${t}</span>`;
 const chartLink=(code)=>`<span class="chartlink" data-code="${code}">營收動能</span>`;
@@ -590,17 +591,20 @@ function hsTipInner(d){              // 浮標：只放最重要的兩行
     `<span class="c-cool">收盤 <b>${Math.round(d.close*100)/100}</b></span></div>`;
 }
 function hsDetailInner(d, hasComp){  // 圖下細節列：回測要看的數字（拖曳時一起換）
-  if(!hasComp) return '<span>這檔沒有本益比（本夢比），算不出進場時機，只能看股價。</span>';
-  return `<span>PER <b>${d.per==null?"—":d.per}</b></span><span>位階 <b>${d.pctl==null?"—":d.pctl+"%"}</b></span>`+
+  if(!hasComp) return '<span>這檔算不出估值位階（本夢比），只能看股價。</span>';
+  return `<span>${HS._mName||"PER"} <b>${d.mval==null?"—":d.mval}</b></span><span>位階 <b>${d.pctl==null?"—":d.pctl+"%"}</b></span>`+
          `<span>營收YoY <b>${d.yoy==null?"—":(d.yoy>0?"+":"")+d.yoy+"%"}</b></span>`+
          `<span>大盤恐慌 <b>${d.mk==null?"—":d.mk}</b></span>`;
 }
 
 async function hsBuild(code){
   if(HS._cache[code]) return HS._cache[code];
-  // 比較區間必須跟卡片一致（data.json 的 per_since），否則圖的最後一天會跟卡片對不上。
+  // 用哪把尺、哪個起算日都必須跟卡片一致（data.json 的 metric / metric_since），
+  // 否則圖的最後一天會跟卡片對不上。TaiwanStockPER 同時回 PER 與 PBR，不用多打一次 API。
   const meta=(window.DATA&&window.DATA.stocks||[]).find(x=>x.code===code);
-  const perSince=(meta&&meta.per_since)||null;
+  const perSince=(meta&&meta.metric_since)||null;
+  const mKey=(meta&&meta.metric==="pbr")?"PBR":"PER";
+  HS._mName=mKey;
   const today=new Date().toISOString().slice(0,10);
   const [per,px,tx,rev]=await Promise.all([
     fmGet("TaiwanStockPER",code,shiftDays(today,-3100),today),   // 位階看前5年 → 要比回測區間多抓5年
@@ -613,7 +617,7 @@ async function hsBuild(code){
   const tr=tx.slice().sort((a,b)=>a.date<b.date?-1:1);
   const fear=fearSeries(tr.map(r=>r.close));           // 大盤恐慌度：逐日
   const fdates=tr.map(r=>r.date);
-  const pp=per.filter(r=>r.PER).sort((a,b)=>a.date<b.date?-1:1);
+  const pp=per.filter(r=>r[mKey]).sort((a,b)=>a.date<b.date?-1:1);
   const rv=rev.slice().sort((a,b)=>(a.revenue_year-b.revenue_year)||(a.revenue_month-b.revenue_month));
   const revIdx={}; rv.forEach(r=> revIdx[r.revenue_year+"-"+r.revenue_month]=r.revenue);
 
@@ -625,14 +629,14 @@ async function hsBuild(code){
     while(j+1<pp.length && pp[j+1].date<=d) j++;
     while(fi+1<fdates.length && fdates[fi+1]<=d) fi++;
     if(fi>=0 && fear[fi]) lastFear=fear[fi].score;
-    // 估值便宜度＝100 − 近5年 PER 位階（視窗樣本太少就不評分）
-    let val=null, perNow=null, pctl=null;
+    // 估值便宜度＝100 − 位階（視窗樣本太少就不評分）
+    let val=null, mNow=null, pctl=null;
     if(j>=0){
       const cut=perSince || shiftDays(d,-1825);     // 釘死起算日 or 近 5 年滾動
       let a=0,b=j; while(a<b){ const m=(a+b)>>1; if(pp[m].date<cut) a=m+1; else b=m; }
       if(j-a>=200){                                 // 與 build_data.py 的 PER_MIN_SAMPLES 同值，改要一起改
-        perNow=pp[j].PER; let below=0;
-        for(let k=a;k<=j;k++) if(pp[k].PER<=perNow) below++;
+        mNow=pp[j][mKey]; let below=0;
+        for(let k=a;k<=j;k++) if(pp[k][mKey]<=mNow) below++;
         pctl=Math.round(below/(j-a+1)*100); val=100-pctl;
       }
     }
@@ -649,7 +653,7 @@ async function hsBuild(code){
     const comp = (val==null||lastFear==null)?null
                : Math.round(0.40*val+0.25*(fund==null?45:fund)+0.35*lastFear);
     out.push({date:d, close:row.close, comp, val, fund, yoy, mk:lastFear,
-              per: perNow==null?null:Math.round(perNow*100)/100, pctl});
+              mval: mNow==null?null:Math.round(mNow*100)/100, pctl});
   }
   HS._cache[code]=out;
   return out;
@@ -962,21 +966,23 @@ function moversHTML(d){
 //   ⇒ 排錯線索：中位數刻度固定在 50%（中位數＝第 50 百分位，這是定義不是硬寫死），
 //     若哪天它不在正中間，是位階算錯了，不是這裡畫錯。
 function perBlock(s){
-  const lo=s.per_min, hi=s.per_max, md=s.per_median, pctl=s.percentile;
+  const lo=s.metric_min, hi=s.metric_max, md=s.metric_median, pctl=s.metric_pctl;
   if(lo==null||hi==null||pctl==null) return "";
   const pos=Math.max(3,Math.min(97,pctl));
   const words = pctl<=50 ? `比過去 <b>${100-pctl}%</b> 的日子便宜`
                          : `比過去 <b>${pctl}%</b> 的日子貴`;
-  const win = s.per_since ? `${s.per_since.slice(0,7)} 起` : "近 5 年";
+  const win = s.metric_since ? `${s.metric_since.slice(0,7)} 起` : "近 5 年";
+  const mName = s.metric==="pbr" ? "股價淨值比" : "本益比";
   return `<div class="perblk">
-      <div class="perblk-t">本益比位階（${win}）　現在 <b>${esc(s.per)}</b>　${words}</div>
+      <div class="perblk-t">${mName}位階（${win}）　現在 <b>${esc(s.metric_val)}</b>　${words}</div>
       <div class="perbar"><div class="tick" style="left:50%"></div>
         <div class="ping" style="left:${pos}%"></div>
         <div class="dot" style="left:${pos}%"></div></div>
       <div class="perscale"><span class="lo">便宜 ${lo}</span>`+
       `<span class="md" style="left:50%">中位 ${md}</span>`+
       `<span class="hi">貴 ${hi}</span></div>`+
-      (s.per_why?`<div class="perwhy">⚙ 比較區間改過（${win}）：${s.per_why}</div>`:"")+
+      (s.metric_why?`<div class="perwhy">⚙ 這檔用${mName}，不用本益比：${s.metric_why}</div>`:"")+
+      (s.since_why?`<div class="perwhy">⚙ 比較區間改過（${win}）：${s.since_why}</div>`:"")+
     `</div>`;
 }
 
@@ -1011,13 +1017,12 @@ function stockCard(s, prevScore, openByDefault){
         ${thesisHTML(s)}${acts}
       </div>`;
   }else{
-    const lo=s.per_min, hi=s.per_max, pos=(hi>lo)?((s.per-lo)/(hi-lo)*100):50;
     const yoyTxt = s.yoy==null?"—":(s.yoy>0?"+":"")+s.yoy+"%";
     const yoyCls = s.yoy==null?"":(s.yoy>=0?"pos":"neg");
     body = `<div class="s-body">
         <div class="s-line">${term('composite','進場時機')} <b>${s.composite}</b> / 100　·　${s.label}</div>
         <div class="data">
-          <div class="d-item"><span class="d-k">${term('per','PER')}（${term('pctl','位階')}）</span><span class="d-v">${esc(s.per)} · ${esc(s.percentile)}%</span></div>
+          <div class="d-item"><span class="d-k">${s.metric==="pbr"?term('pbr','PBR'):term('per','PER')}（${term('pctl','位階')}）</span><span class="d-v">${esc(s.metric_val)} · ${esc(s.metric_pctl)}%</span></div>
           <div class="d-item"><span class="d-k">${term('val_cheap','估值便宜度')}</span><span class="d-v">${esc(s.val_cheap)}</span></div>
           <div class="d-item"><span class="d-k">${chartLink(s.code)}</span><span class="d-v ${yoyCls}">${yoyTxt}</span></div>
           <div class="d-item"><span class="d-k">${term('fund','基本面')}</span><span class="d-v">${esc(s.fund)}</span></div>
