@@ -65,6 +65,14 @@
   .sec-n{font-size:.72rem;color:var(--muted);white-space:nowrap}
   .sec-empty{font-size:.84rem;color:var(--muted);padding:12px 2px 4px;border-top:1px solid var(--line)}
 
+  /* 比較區間切換（標準 / 客製） */
+  .modesw{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:16px 0 2px}
+  .modesw .ms-t{font-size:.74rem;color:var(--muted);letter-spacing:.03em}
+  .modesw button{font:inherit;font-size:.76rem;padding:7px 13px;border:1px solid var(--line);
+    border-radius:999px;background:var(--bg);color:var(--muted);cursor:pointer}
+  .modesw button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+  .modesw .ms-n{font-size:.7rem;color:var(--muted);margin-left:auto}
+
   /* 今日變化（跟上一個交易日比） */
   .movers{display:flex;flex-wrap:wrap;align-items:baseline;gap:3px 12px;font-size:.83rem;color:var(--muted);
     margin:-4px 0 4px;padding:10px 12px;background:var(--panel);border:1px solid var(--line);border-radius:10px}
@@ -598,10 +606,11 @@ function hsDetailInner(d, hasComp){  // 圖下細節列：回測要看的數字�
 }
 
 async function hsBuild(code){
-  if(HS._cache[code]) return HS._cache[code];
+  const ck=code+"|"+MODE;                  // 兩種模式的序列不同，快取要分開
+  if(HS._cache[ck]) return HS._cache[ck];
   // 用哪把尺、哪個起算日都必須跟卡片一致（data.json 的 metric / metric_since），
   // 否則圖的最後一天會跟卡片對不上。TaiwanStockPER 同時回 PER 與 PBR，不用多打一次 API。
-  const meta=(window.DATA&&window.DATA.stocks||[]).find(x=>x.code===code);
+  const meta=view((window.DATA&&window.DATA.stocks||[]).find(x=>x.code===code));
   const perSince=(meta&&meta.metric_since)||null;
   const mKey=(meta&&meta.metric==="pbr")?"PBR":"PER";
   HS._mName=mKey;
@@ -655,7 +664,7 @@ async function hsBuild(code){
     out.push({date:d, close:row.close, comp, val, fund, yoy, mk:lastFear,
               mval: mNow==null?null:Math.round(mNow*100)/100, pctl});
   }
-  HS._cache[code]=out;
+  HS._cache[ck]=out;
   return out;
 }
 
@@ -663,10 +672,11 @@ async function hsOpen(code, name){
   const modal=document.getElementById("hchart"), body=document.querySelector("#hchart .hbody");
   const s=(window.DATA&&window.DATA.stocks||[]).find(x=>x.code===code);
   HS.name = name || (s?(s.name||""):"");
+  HS.mode = MODE;
   document.getElementById("htitle").textContent=(HS.name?HS.name+" ":"")+code+"　歷史";
   modal.classList.add("show");
-  if(HS.code===code && HS.series){ HS.focus=null; hsDraw(); hsSync(); return; }
-  HS.code=code; HS.series=null; HS.focus=null;
+  if(HS.code===code && HS.series && HS._seriesMode===MODE){ HS.focus=null; hsDraw(); hsSync(); return; }
+  HS.code=code; HS.series=null; HS.focus=null; HS._seriesMode=MODE;
   body.innerHTML='<div class="label">計算中…（抓 FinMind 歷史，再把溫度計對每一天各算一次，約 1~3 秒）</div>';
   try{
     HS.series=await hsBuild(code);
@@ -792,6 +802,15 @@ document.addEventListener("click", e=>{
   if(cl){ e.preventDefault(); tip.classList.remove("show"); openChart(cl.dataset.code); e.stopPropagation(); return; }
   const ml=e.target.closest(".mklink");
   if(ml){ e.preventDefault(); tip.classList.remove("show"); mkOpen(); e.stopPropagation(); return; }
+  const msw=e.target.closest(".modesw button[data-mode]");
+  if(msw){
+    MODE=msw.dataset.mode;
+    try{ localStorage.setItem("tw_mode", MODE); }catch(_){}
+    ["chart","mkchart","hchart"].forEach(id=>{         // 圖的資料跟著模式走，先收起來免得看到舊的
+      const m=document.getElementById(id); if(m) m.classList.remove("show"); });
+    if(window.DATA) render(window.DATA);
+    e.stopPropagation(); return;
+  }
   const hl=e.target.closest(".hslink");
   if(hl){ e.preventDefault(); tip.classList.remove("show"); hsOpen(hl.dataset.code); e.stopPropagation(); return; }
   const rl=e.target.closest(".rmlink");
@@ -933,6 +952,18 @@ fetch("./data.json?_="+Date.now()).then(r=>r.json()).then(render).catch(()=>{
     '<span class="err">讀取 data.json 失敗</span>（本機請用 http 開啟，或等 GitHub Pages 上線）';
 });
 
+// ── 比較區間模式：標準（近 5 年）／客製（watchlist 的 @since）────────────
+// 兩套數字都在 data.json 裡（client 端只是選要顯示哪一套），所以切換不用重算、不打 API。
+let MODE = "std";
+try{ MODE = localStorage.getItem("tw_mode") || "std"; }catch(_){}
+function view(s){ return (MODE==="cust" && s && s.alt) ? Object.assign({}, s, s.alt) : s; }
+function usingAlt(s){ return MODE==="cust" && !!(s && s.alt); }
+function prevOf(d, s){            // ▲▼ 的基準要跟目前顯示的那一套對齊
+  const p=d.prev||{};
+  if(usingAlt(s) && p.stocks_alt && p.stocks_alt[s.code]!=null) return p.stocks_alt[s.code];
+  return (p.stocks||{})[s.code];
+}
+
 // ── 變化量：跟「上一個交易日」比（build_data.py 寫進 data.json 的 prev）──
 function deltaHTML(cur, prev){
   if(cur==null || prev==null) return "";
@@ -943,8 +974,9 @@ function deltaHTML(cur, prev){
 function moversHTML(d){
   const p=d.prev||{}, P=p.stocks||{};
   if(!p.date) return "";                       // 第一次產出、還沒有基準
-  const mv=(d.stocks||[]).filter(s=>s.composite!=null && P[s.code]!=null)
-    .map(s=>({n:s.name||s.code, v:s.composite-P[s.code]}))
+  const mv=(d.stocks||[]).map(s=>({raw:s, v:view(s)}))
+    .filter(({raw,v})=> v.composite!=null && prevOf(d,raw)!=null)
+    .map(({raw,v})=>({n:v.name||v.code, v:v.composite-prevOf(d,raw)}))
     .filter(x=>x.v!==0).sort((a,b)=>Math.abs(b.v)-Math.abs(a.v)).slice(0,3);
   const bits=mv.map(x=>`<span class="mv-i">${x.n} <b class="${x.v>0?"up":"down"}">${x.v>0?"+":""}${x.v}</b></span>`);
   const mkd=(d.market&&d.market.score!=null&&p.market!=null)?d.market.score-p.market:null;
@@ -984,6 +1016,15 @@ function perBlock(s){
       (s.metric_why?`<div class="perwhy">⚙ 這檔用${mName}，不用本益比：${s.metric_why}</div>`:"")+
       (s.since_why?`<div class="perwhy">⚙ 比較區間改過（${win}）：${s.since_why}</div>`:"")+
     `</div>`;
+}
+
+function modeSwitchHTML(d){
+  const n=(d.stocks||[]).filter(s=>s.alt).length;
+  if(!n) return "";                       // 沒人設 @since 就不用給這個選擇
+  return `<div class="modesw"><span class="ms-t">比較區間</span>`+
+    `<button data-mode="std" class="${MODE==="std"?"on":""}">近 5 年</button>`+
+    `<button data-mode="cust" class="${MODE==="cust"?"on":""}">客製</button>`+
+    `<span class="ms-n">${n} 檔有客製起算日</span></div>`;
 }
 
 // ── 一檔股票＝一個 <details>：收合是一列（整列可點）、展開才是細節 ──
@@ -1038,7 +1079,6 @@ function stockCard(s, prevScore, openByDefault){
 function render(d){
   window.DATA=d;
   const m=d.market||{};
-  const P=(d.prev&&d.prev.stocks)||{};
   const gen=(d.generated_at||"").replace("T"," ").replace("+00:00"," UTC");
   document.getElementById("sub").textContent =
     "資料日 "+(m.date||"—")+"　·　產出 "+gen+"　·　溫度計，非投資建議";
@@ -1062,21 +1102,23 @@ function render(d){
       ${m.margin_note?`<div class="stats">${m.margin_note.split(" · ").map(x=>`<span>${x}</span>`).join("")}</div>`:""}
     </div>` + moversHTML(d);
 
-  const scored=d.stocks.filter(s=>s.composite!=null).sort((a,b)=>b.composite-a.composite);
+  // 排序與分區都要用「目前這一套」的分數
+  const V=d.stocks.map(x=>({raw:x, v:view(x)}));
+  const scored=V.filter(x=>x.v.composite!=null).sort((a,b)=>b.v.composite-a.v.composite);
   const groups=[
-    {k:"open", t:"打折中", n:"65 分以上", open:true,  list:scored.filter(s=>s.composite>=65),
+    {k:"open", t:"打折中", n:"65 分以上", open:true,  list:scored.filter(x=>x.v.composite>=65),
      empty:"目前沒有落在打折區的標的——這正是「該等、別亂動」的時候。"},
-    {k:"half", t:"觀察",   n:"45–64 分", open:false, list:scored.filter(s=>s.composite>=45&&s.composite<65)},
-    {k:"shut", t:"太貴",   n:"低於 45 分", open:false, list:scored.filter(s=>s.composite<45)},
-    {k:"dream",t:"本夢比", n:"無本益比、不評分", open:false, list:d.stocks.filter(s=>s.composite==null)},
+    {k:"half", t:"觀察",   n:"45–64 分", open:false, list:scored.filter(x=>x.v.composite>=45&&x.v.composite<65)},
+    {k:"shut", t:"太貴",   n:"低於 45 分", open:false, list:scored.filter(x=>x.v.composite<45)},
+    {k:"dream",t:"本夢比", n:"無估值位階、不評分", open:false, list:V.filter(x=>x.v.composite==null)},
   ];
-  let html="";
+  let html=modeSwitchHTML(d);
   for(const g of groups){
     if(!g.list.length && !g.empty) continue;
     html+=`<div class="sec"><span class="sec-t ${g.k}">${g.t}</span>`+
           `<span class="sec-n">${g.list.length} 檔 · ${g.n}</span></div>`;
     if(!g.list.length){ html+=`<div class="sec-empty">${g.empty}</div>`; continue; }
-    for(const s of g.list) html+=stockCard(s, P[s.code], g.open);
+    for(const x of g.list) html+=stockCard(x.v, prevOf(d,x.raw), g.open);
   }
   app.insertAdjacentHTML("beforeend", html);
 
@@ -1085,6 +1127,7 @@ function render(d){
     "<li>今日變化 ▲▼：分數跟「上一個交易日」比。▲＝時機變好（更便宜／更恐慌），▼＝變差。同一天重跑不會洗掉基準。</li>"+
     "<li>分區：打折中（≥65）預設展開，觀察／太貴收成一列——點任一列展開細節。</li>"+
     "<li>營收動能📊：展開後點「營收動能」看歷年月營收與 YoY 成長率圖。</li>"+
+    "<li>比較區間（標準／客製）：位階預設跟「自己近 5 年」比。少數股票在 <code>watchlist.txt</code> 設了 <code>@since</code> 起算日（業態變過、舊資料不可比），切到「客製」就改跟那一段比。<b>兩套數字都在，隨時可以對照</b>——縮短區間通常會讓股票看起來比較便宜，看得到標準版才不會騙自己。</li>"+
     "<li>股價漲跌：現價旁邊是「最新交易日」與「近 3 月」的漲跌幅。<b>紅漲綠跌</b>（台股慣例；在這裡剛好也一致——漲＝變貴＝紅）。資料每交易日收盤後更新，不是即時報價。</li>"+
     "<li>歷史回測🕰：展開後點「🕰 歷史回測」，會把同一套公式對過去每一個交易日各算一次。手指按著左右滑＝時光倒流到那一天，讀數就是當時的進場時機／PER 位階／營收 YoY／大盤恐慌。可切「進場時機／股價／疊圖」與 1～5 年。</li>"+
     "<li>論點：你自己記下「為什麼持有、什麼情況算論點破」。大跌時回來重讀，決定加碼還是認賠——治「看成本價捨不得賣」。</li>";

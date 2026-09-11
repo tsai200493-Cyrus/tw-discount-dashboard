@@ -192,21 +192,22 @@ def value_band(code, since=None):
         以及覆蓋率是不是剛好跨過 85% 門檻。
 
     TaiwanStockPER 這支 API 同時回 PER 與 PBR，換尺不用多打一次。
+
+    網站可以在「標準（近 5 年）」與「客製（@since 起算）」之間切換，所以兩套
+    都要算出來寫進 data.json——抓一次資料、算兩次視窗，不會多打 API。
     """
     default_start = (dt.date.today() - dt.timedelta(days=PER_DEFAULT_DAYS)).isoformat()
     rows = _get("TaiwanStockPER", code, min(since, default_start) if since else default_start)
     if isinstance(rows, dict) or not rows:
         return None
     rows = sorted(rows, key=lambda x: x["date"])
+    return _band(rows, since or default_start, code, since)
 
-    start, eff_since = (since or default_start), since
+
+def _band(rows, start, code, eff_since):
+    """把某個起算日的視窗算成位階。eff_since=None 代表這是標準（近 5 年）那一套。"""
     win = [r for r in rows if r["date"] >= start]
-    if since and len(win) < PER_MIN_SAMPLES:
-        print(f"::warning::{code} 自 {since} 起只有 {len(win)} 個交易日"
-              f"（低於 {PER_MIN_SAMPLES}），退回近 5 年")
-        start, eff_since = default_start, None
-        win = [r for r in rows if r["date"] >= start]
-    if not win:
+    if len(win) < PER_MIN_SAMPLES:
         return None
 
     n_per = sum(1 for r in win if r.get("PER"))
@@ -298,6 +299,10 @@ def load_prev(mk_date):
         "market": (old.get("market") or {}).get("score"),
         "stocks": {s["code"]: s["composite"] for s in old.get("stocks", [])
                    if s.get("code") and s.get("composite") is not None},
+        # 客製版另存一份：切到客製模式時 ▲▼ 要拿客製的昨天比，不能拿標準的
+        "stocks_alt": {s["code"]: (s.get("alt") or {}).get("composite")
+                       for s in old.get("stocks", [])
+                       if s.get("code") and (s.get("alt") or {}).get("composite") is not None},
     }
 
 
@@ -380,7 +385,13 @@ def quality_fingerprint(code):
 
 
 def build_stock(code, name, mkf, since=None, why=None):
-    vb = value_band(code, since)
+    default_start = (dt.date.today() - dt.timedelta(days=PER_DEFAULT_DAYS)).isoformat()
+    rows = _get("TaiwanStockPER", code, min(since, default_start) if since else default_start)
+    rows = sorted(rows, key=lambda x: x["date"]) if isinstance(rows, list) else []
+    vb = _band(rows, default_start, code, None) if rows else None   # 標準：一律近 5 年
+    alt = _band(rows, since, code, since) if (rows and since) else None   # 客製：@since 起算
+    if since and alt is None:
+        print(f"::warning::{code} 自 {since} 起樣本不足 {PER_MIN_SAMPLES}，客製版跳過")
     rd = revenue_data(code)
     ps = price_series(code)
     price = ps["last"] if ps else None
@@ -397,14 +408,25 @@ def build_stock(code, name, mkf, since=None, why=None):
     fund = None if yoy is None else round(clamp(45 + yoy * 1.2))
     composite = round(W_VALUE * val_cheap + W_FUND * (fund if fund is not None else 45)
                       + W_MARKET * mkf)
+    alt_out = None
+    if alt:
+        a_cheap = 100 - alt["pctl"]
+        a_comp = round(W_VALUE * a_cheap + W_FUND * (fund if fund is not None else 45)
+                       + W_MARKET * mkf)
+        alt_out = {"metric": alt["metric"], "metric_val": alt["now"], "metric_pctl": alt["pctl"],
+                   "metric_min": alt["min"], "metric_median": alt["median"],
+                   "metric_max": alt["max"], "metric_why": alt["why"],
+                   "metric_cov": alt["coverage"], "metric_n": alt["n"],
+                   "metric_since": alt["since"], "since_why": why,
+                   "val_cheap": a_cheap, "composite": a_comp, "label": window_label(a_comp)}
     return {"code": code, "name": name, "price": price,
             "metric": vb["metric"], "metric_val": vb["now"], "metric_pctl": vb["pctl"],
             "metric_min": vb["min"], "metric_median": vb["median"], "metric_max": vb["max"],
             "metric_why": vb["why"], "metric_cov": vb["coverage"], "metric_n": vb["n"],
-            "metric_since": vb["since"], "since_why": why if vb["since"] else None,
+            "metric_since": vb["since"],
             "val_cheap": val_cheap, "yoy": yoy, "revenue_history": history,
             "spark": spark, "quality": quality, "fund": fund, "composite": composite,
-            "label": window_label(composite)}
+            "label": window_label(composite), "alt": alt_out}
 
 
 def main():
