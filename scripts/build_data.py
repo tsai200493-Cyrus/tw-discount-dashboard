@@ -19,6 +19,7 @@ from __future__ import annotations
 import datetime as dt
 import json
 import os
+import re
 import statistics as st
 import sys
 from pathlib import Path
@@ -30,6 +31,10 @@ ROOT = Path(__file__).resolve().parents[1]
 
 # 進場時機權重（透明、未回測調參；故意笨而誠實，避免過度擬合）
 W_VALUE, W_FUND, W_MARKET = 0.40, 0.25, 0.35
+
+PER_DEFAULT_DAYS = 1825    # 本益比位階的預設比較區間（近 5 年）
+PER_MIN_SAMPLES = 200      # 自訂區間的樣本下限（一年約 245 個交易日），不足就退回預設
+SINCE_RE = re.compile(r"@since=(\d{4})-(\d{2})(?:-(\d{2}))?")
 
 
 def _get(dataset, data_id, start_date):
@@ -56,7 +61,24 @@ def clamp(x, lo=0.0, hi=100.0):
 
 
 def load_watchlist():
-    """每行一檔：`CODE  # 名稱`；# 開頭整行為註解。回傳 [(code, name), ...]。"""
+    """每行一檔：`CODE  # 名稱 [@since=YYYY-MM 理由]`；# 開頭整行為註解。
+
+    @since 把「本益比位階」的比較起點釘死在某一天（預設是近 5 年的滾動區間）。
+    只該用在業態真的變過、舊資料不可比的股票上。
+
+    ［決策 2026-09-11｜需求人］@since 必須附理由，沒寫理由就不生效。
+      前提：比較區間是「能把任何股票調到看起來便宜」的參數。實測 2026-09-11：
+        全域從 5 年改 3 年，追蹤清單 8 檔「全部」變便宜、沒有一檔變貴
+        （富喬 51→67 直接跨進「打折中」），而且跟是不是 AI 股無關——
+        縮區間的實際效果是刪掉 2021–22 的低估值年代，不是校正業態。
+      已知代價：想臨時試不同區間會很麻煩，得先寫個理由進 watchlist。這是刻意的摩擦。
+      ⇒ 排錯線索：某檔位階看起來不合理時，先看卡片上標的區間是不是被改過。
+
+    用固定起始日而非「近 N 年」：業態改變是事件，不是滾動窗。寫「近 3 年」的話
+    明年會自動變成從隔年起算，基準會無聲漂移。
+
+    回傳 [{code, name, since, why}, ...]
+    """
     out = []
     path = ROOT / "watchlist.txt"
     for raw in path.read_text(encoding="utf-8").splitlines():
@@ -65,9 +87,25 @@ def load_watchlist():
             continue
         code, _, comment = line.partition("#")
         code = code.strip()
-        name = comment.strip()
-        if code:
-            out.append((code, name))
+        if not code:
+            continue
+        since = why = None
+        m = SINCE_RE.search(comment)
+        if m:
+            name = comment[:m.start()].strip()
+            why = comment[m.end():].strip()
+            try:
+                since = dt.date(int(m.group(1)), int(m.group(2)),
+                                int(m.group(3) or 1)).isoformat()
+            except ValueError:
+                print(f"::warning::{code} 的 {m.group(0)} 不是有效日期，忽略")
+                since = None
+            if since and not why:
+                print(f"::warning::{code} 設了 {m.group(0)} 但沒寫理由 → 不生效（理由必填）")
+                since = None
+        else:
+            name = comment.strip()
+        out.append({"code": code, "name": name, "since": since, "why": why})
     return out
 
 
@@ -136,20 +174,35 @@ def margin_context():
     return note
 
 
-def per_band(code):
-    start = (dt.date.today() - dt.timedelta(days=365 * 5)).isoformat()
-    rows = _get("TaiwanStockPER", code, start)
+def per_band(code, since=None):
+    """本益比位階。since 有給就從那天起算，否則用預設的近 5 年。
+
+    樣本不足 PER_MIN_SAMPLES 就退回預設區間並警告——樣本太少的百分位是雜訊。
+    回傳的 since 是「實際生效」的起算日；退回預設時為 None，前端才不會標錯。
+    """
+    default_start = (dt.date.today() - dt.timedelta(days=PER_DEFAULT_DAYS)).isoformat()
+    rows = _get("TaiwanStockPER", code, min(since, default_start) if since else default_start)
     if isinstance(rows, dict) or not rows:
         return None
     rows = sorted(rows, key=lambda x: x["date"])
-    vals = [r["PER"] for r in rows if r.get("PER") not in (None, 0)]
+    good = [r for r in rows if r.get("PER") not in (None, 0)]
+    if not good:
+        return None
+    now = good[-1]["PER"]          # 取最後一筆「有效」的，不是最後一筆（那筆可能是 0/None）
+
+    start, eff = (since or default_start), since
+    vals = [r["PER"] for r in good if r["date"] >= start]
+    if since and len(vals) < PER_MIN_SAMPLES:
+        print(f"::warning::{code} 自 {since} 起只有 {len(vals)} 筆本益比"
+              f"（低於 {PER_MIN_SAMPLES}），退回近 5 年")
+        start, eff = default_start, None
+        vals = [r["PER"] for r in good if r["date"] >= start]
     if not vals:
         return None
-    now = rows[-1].get("PER")
     below = sum(1 for v in vals if v <= now)
     return {"now": round(now, 2), "percentile": round(below / len(vals) * 100),
             "min": round(min(vals), 1), "median": round(sorted(vals)[len(vals) // 2], 1),
-            "max": round(max(vals), 1)}
+            "max": round(max(vals), 1), "since": eff, "n": len(vals)}
 
 
 def revenue_data(code):
@@ -299,8 +352,8 @@ def quality_fingerprint(code):
             "gm": round(gm_avg, 1), "om": round(om_avg, 1), "years": len(yrs)}
 
 
-def build_stock(code, name, mkf):
-    per = per_band(code)
+def build_stock(code, name, mkf, since=None, why=None):
+    per = per_band(code, since)
     rd = revenue_data(code)
     ps = price_series(code)
     price = ps["last"] if ps else None
@@ -320,6 +373,8 @@ def build_stock(code, name, mkf):
     return {"code": code, "name": name, "price": price, "per": per["now"],
             "percentile": per["percentile"], "per_min": per["min"],
             "per_median": per["median"], "per_max": per["max"],
+            "per_since": per["since"], "per_why": why if per["since"] else None,
+            "per_n": per["n"],
             "val_cheap": val_cheap, "yoy": yoy, "revenue_history": history,
             "spark": spark, "quality": quality, "fund": fund, "composite": composite,
             "label": window_label(composite)}
@@ -331,9 +386,10 @@ def main():
     prev = load_prev(mk.get("date"))   # 先讀，等一下才會覆寫 data.json
     stocks = []
     thesis = load_thesis()
-    for code, name in load_watchlist():
+    for item in load_watchlist():
+        code, name = item["code"], item["name"]
         try:
-            st_ = build_stock(code, name, mkf)
+            st_ = build_stock(code, name, mkf, item["since"], item["why"])
         except Exception as exc:  # noqa: BLE001 — 單檔失敗不拖垮整批
             st_ = {"code": code, "name": name, "label": f"抓取失敗: {exc}"}
         t = thesis.get(code) or {}
