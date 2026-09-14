@@ -1,47 +1,51 @@
 {
-  "generated_at": "2026-09-11T14:02:16+00:00",
+  "generated_at": "2026-09-14T16:08:40+00:00",
   "market": {
-    "score": 17,
+    "score": 19,
     "tag": "貪婪(該收手)",
-    "close": 46185,
-    "bias": 8.7,
-    "dd": -3.3,
-    "vol": 17.1,
-    "date": "2026-09-11",
-    "margin_note": "融資餘額 5879 億 · 近一年位階 91%（2642–6313） · 近一月 +7%"
+    "close": 45863,
+    "bias": 7.7,
+    "dd": -3.9,
+    "vol": 17.3,
+    "date": "2026-09-14",
+    "margin_note": "融資餘額 5839 億 · 近一年位階 89%（2642–6313） · 近一月 +7%"
   },
   "prev": {
-    "date": "2026-09-10",
-    "market": 12,
+    "date": "2026-09-11",
+    "market": 17,
     "stocks": {
-      "2330": 36,
-      "6669": 69,
-      "2382": 54,
-      "3037": 38,
-      "3481": 22,
-      "2454": 19,
-      "2408": 42,
-      "2308": 32,
-      "1815": 52,
-      "5475": 37
+      "2330": 39,
+      "6669": 71,
+      "2382": 56,
+      "3037": 39,
+      "3481": 19,
+      "2454": 30,
+      "2408": 34,
+      "2308": 34,
+      "1815": 33,
+      "5475": 35
+    },
+    "stocks_alt": {
+      "2330": 45,
+      "2382": 65
     }
   },
   "stocks": [
     {
       "code": "2330",
       "name": "台積電",
-      "price": 2410.0,
+      "price": 2380.0,
       "metric": "per",
-      "metric_val": 27.94,
-      "metric_pctl": 79,
+      "metric_val": 27.59,
+      "metric_pctl": 75,
       "metric_min": 12.5,
       "metric_median": 23.4,
       "metric_max": 34.9,
       "metric_why": null,
       "metric_cov": 100,
-      "metric_n": 1214,
+      "metric_n": 1213,
       "metric_since": null,
-      "val_cheap": 21,
+      "val_cheap": 25,
       "yoy": 53.3,
       "revenue_history": [
         {
@@ -226,7 +230,6 @@
         }
       ],
       "spark": [
-        2250.0,
         2310.0,
         2375.0,
         2400.0,
@@ -290,7 +293,8 @@
         2470.0,
         2465.0,
         2450.0,
-        2410.0
+        2410.0,
+        2380.0
       ],
       "quality": {
         "score": 94,
@@ -301,22 +305,22 @@
         "years": 5
       },
       "fund": 100,
-      "composite": 39,
+      "composite": 42,
       "label": "時機差（貴＋貪婪）",
       "alt": {
         "metric": "per",
-        "metric_val": 27.94,
-        "metric_pctl": 64,
+        "metric_val": 27.59,
+        "metric_pctl": 59,
         "metric_min": 17.4,
         "metric_median": 26.9,
         "metric_max": 34.9,
         "metric_why": null,
         "metric_cov": 100,
-        "metric_n": 536,
+        "metric_n": 537,
         "metric_since": "2024-07-01",
         "since_why": "先進製程定價權，營益率自2024Q3階梯推升 42.6%→59.3%",
-        "val_cheap": 36,
-        "composite": 45,
+        "val_cheap": 41,
+        "composite": 48,
         "label": "普通（中性）"
       },
       "thesis": "",
@@ -325,16 +329,16 @@
     {
       "code": "6669",
       "name": "緯穎",
-      "price": 2310.0,
+      "price": 2270.0,
       "metric": "per",
-      "metric_val": 7.41,
+      "metric_val": 7.28,
       "metric_pctl": 0,
-      "metric_min": 7.4,
+      "metric_min": 7.3,
       "metric_median": 18.1,
       "metric_max": 38.5,
       "metric_why": null,
       "metric_cov": 100,
-      "metric_n": 1214,
+      "metric_n": 1213,
       "metric_since": null,
       "val_cheap": 100,
       "yoy": 50.4,
@@ -521,7 +525,6 @@
         }
       ],
       "spark": [
-        4900.0,
         4850.0,
         4900.0,
         4880.0,
@@ -585,7 +588,8 @@
         2340.0,
         2325.0,
         2345.0,
-        2310.0
+        2310.0,
+        2270.0
       ],
       "quality": {
         "score": 81,
@@ -596,7 +600,7 @@
         "years": 5
       },
       "fund": 100,
-      "composite": 71,
+      "composite": 72,
       "label": "時機佳（便宜＋恐慌）",
       "alt": null,
       "thesis": "AI 伺服器液冷 ＋ 北美 CSP 大客戶 ODM 卡位，交期與整機驗證是門檻。",
@@ -605,18 +609,18 @@
     {
       "code": "2382",
       "name": "廣達",
-      "price": 336.5,
+      "price": 332.5,
       "metric": "per",
-      "metric_val": 14.66,
-      "metric_pctl": 38,
+      "metric_val": 14.49,
+      "metric_pctl": 36,
       "metric_min": 8.6,
       "metric_median": 15.9,
       "metric_max": 35.5,
       "metric_why": null,
       "metric_cov": 100,
-      "metric_n": 1214,
+      "metric_n": 1213,
       "metric_since": null,
-      "val_cheap": 62,
+      "val_cheap": 64,
       "yoy": 177.5,
       "revenue_history": [
         {
@@ -801,7 +805,6 @@
         }
       ],
       "spark": [
-        370.0,
         372.0,
         370.0,
         362.5,
@@ -865,7 +868,8 @@
         328.0,
         342.0,
         336.0,
-        336.5
+        336.5,
+        332.5
       ],
       "quality": {
         "score": 75,
@@ -876,22 +880,22 @@
         "years": 5
       },
       "fund": 100,
-      "composite": 56,
+      "composite": 57,
       "label": "普通（中性）",
       "alt": {
         "metric": "per",
-        "metric_val": 14.66,
-        "metric_pctl": 15,
+        "metric_val": 14.49,
+        "metric_pctl": 13,
         "metric_min": 9.4,
         "metric_median": 17.7,
         "metric_max": 35.5,
         "metric_why": null,
         "metric_cov": 100,
-        "metric_n": 892,
+        "metric_n": 893,
         "metric_since": "2023-01-01",
         "since_why": "成長主軸從NB轉AI伺服器，營益率1.8%→4.4%",
-        "val_cheap": 85,
-        "composite": 65,
+        "val_cheap": 87,
+        "composite": 66,
         "label": "時機佳（便宜＋恐慌）"
       },
       "thesis": "",
@@ -900,18 +904,18 @@
     {
       "code": "3037",
       "name": "欣興",
-      "price": 977.0,
+      "price": 970.0,
       "metric": "per",
-      "metric_val": 65.05,
-      "metric_pctl": 79,
+      "metric_val": 64.58,
+      "metric_pctl": 78,
       "metric_min": 6.4,
       "metric_median": 26.2,
       "metric_max": 213.4,
       "metric_why": null,
       "metric_cov": 100,
-      "metric_n": 1214,
+      "metric_n": 1213,
       "metric_since": null,
-      "val_cheap": 21,
+      "val_cheap": 22,
       "yoy": 56.3,
       "revenue_history": [
         {
@@ -1096,7 +1100,6 @@
         }
       ],
       "spark": [
-        854.0,
         902.0,
         960.0,
         981.0,
@@ -1160,7 +1163,8 @@
         954.0,
         993.0,
         994.0,
-        977.0
+        977.0,
+        970.0
       ],
       "quality": {
         "score": 54,
@@ -1171,7 +1175,7 @@
         "years": 5
       },
       "fund": 100,
-      "composite": 39,
+      "composite": 40,
       "label": "時機差（貴＋貪婪）",
       "alt": null,
       "thesis": "<b>本業：ABF 載板</b>（半導體封裝基板，夾在 IC 與 PCB 中間那層）。上游吃玻纖布／銅箔基板 CCL，下游是 CPU／GPU 封裝。<br>⚠ 營益率是循環的：2021Q3 衝到 27%，2023–24 又掉回 4.4%，不是穩定的高毛利生意。<br><i>持有理由與論點破待補。</i>",
@@ -1180,7 +1184,7 @@
     {
       "code": "3481",
       "name": "群創",
-      "price": 47.7,
+      "price": 47.65,
       "metric": "pbr",
       "metric_val": 1.69,
       "metric_pctl": 95,
@@ -1189,7 +1193,7 @@
       "metric_max": 2.5,
       "metric_why": "區間內只有 54% 的交易日有本益比（虧損時沒有），改用股價淨值比",
       "metric_cov": 54,
-      "metric_n": 1193,
+      "metric_n": 1192,
       "metric_since": null,
       "val_cheap": 5,
       "yoy": 0.0,
@@ -1376,7 +1380,6 @@
         }
       ],
       "spark": [
-        46.95,
         48.55,
         51.4,
         53.3,
@@ -1440,7 +1443,8 @@
         48.8,
         50.1,
         49.35,
-        47.7
+        47.7,
+        47.65
       ],
       "quality": {
         "score": 5,
@@ -1451,7 +1455,7 @@
         "years": 5
       },
       "fund": 45,
-      "composite": 19,
+      "composite": 20,
       "label": "時機差（貴＋貪婪）",
       "alt": null,
       "thesis": "",
@@ -1460,16 +1464,16 @@
     {
       "code": "2454",
       "name": "聯發科",
-      "price": 4585.0,
+      "price": 4560.0,
       "metric": "per",
-      "metric_val": 75.72,
+      "metric_val": 75.31,
       "metric_pctl": 100,
       "metric_min": 6.8,
       "metric_median": 19.4,
       "metric_max": 78.6,
       "metric_why": null,
       "metric_cov": 100,
-      "metric_n": 1214,
+      "metric_n": 1213,
       "metric_since": null,
       "val_cheap": 0,
       "yoy": 44.1,
@@ -1656,7 +1660,6 @@
         }
       ],
       "spark": [
-        4085.0,
         4180.0,
         4470.0,
         4560.0,
@@ -1720,7 +1723,8 @@
         4710.0,
         4625.0,
         4720.0,
-        4585.0
+        4585.0,
+        4560.0
       ],
       "quality": {
         "score": 97,
@@ -1731,7 +1735,7 @@
         "years": 5
       },
       "fund": 98,
-      "composite": 30,
+      "composite": 31,
       "label": "時機差（貴＋貪婪）",
       "alt": null,
       "thesis": "<b>本業：IC 設計（無晶圓廠）</b>——手機晶片「天璣」系列是基本盤，另有 Wi-Fi／電視／車用晶片。<br>新主軸是 <b>AI ASIC</b>：替 Google 做客製化 TPU（v8x 2026 下半年量產），公司把 2026 年 AI ASIC 營收目標上修到 20 億美元（約占 8%），並預期 2027 年拉到 27%；NVIDIA 認了 35 億美元海外可轉債、Google 也參與。<br>⚠ ASIC 是<b>單一大客戶生意</b>：量大，但客戶自己就握有議價權，而且博通、超微在搶同一批訂單。手機 SoC 那塊仍看中國換機循環。<br><i>持有理由與論點破待補。</i>",
@@ -1740,18 +1744,18 @@
     {
       "code": "2408",
       "name": "南亞科",
-      "price": 493.0,
+      "price": 473.0,
       "metric": "pbr",
-      "metric_val": 5.27,
-      "metric_pctl": 93,
+      "metric_val": 5.06,
+      "metric_pctl": 92,
       "metric_min": 0.48,
-      "metric_median": 1.2,
+      "metric_median": 1.19,
       "metric_max": 8.11,
       "metric_why": "區間內只有 49% 的交易日有本益比（虧損時沒有），改用股價淨值比",
       "metric_cov": 49,
-      "metric_n": 1214,
+      "metric_n": 1213,
       "metric_since": null,
-      "val_cheap": 7,
+      "val_cheap": 8,
       "yoy": 560.9,
       "revenue_history": [
         {
@@ -1936,7 +1940,6 @@
         }
       ],
       "spark": [
-        340.0,
         374.0,
         395.5,
         425.0,
@@ -2000,7 +2003,8 @@
         531.0,
         523.0,
         515.0,
-        493.0
+        493.0,
+        473.0
       ],
       "quality": {
         "score": 0,
@@ -2011,7 +2015,7 @@
         "years": 5
       },
       "fund": 100,
-      "composite": 34,
+      "composite": 35,
       "label": "時機差（貴＋貪婪）",
       "alt": null,
       "thesis": "<b>本業：DRAM 記憶體</b>（台塑集團）。做利基型 DDR3／DDR4 與常規記憶體，<b>不是 HBM 那條線</b>。<br>⚠ 這是<b>強循環股，不是成長股</b>：2023–25 連虧 11 季，2025Q3 才轉盈；2026Q2 靠 DRAM 漲價把毛利率拉到 79.5%、單季 EPS 14.66 元。這一輪缺貨的主因是三星／海力士／美光陸續停供 DDR4／LPDDR4。循環股的規律是「在本益比最低的時候最貴」——獲利衝頂那一刻，通常就是循環的頂點。<br>⚠ 卡片上這檔用<b>股價淨值比（PBR）不是本益比</b>：近 5 年將近一半的交易日沒有本益比（虧損時算不出來），拿 PER 算位階等於只跟賺錢的那半個循環比。<br><i>持有理由與論點破待補。</i>",
@@ -2025,11 +2029,11 @@
       "metric_val": 51.56,
       "metric_pctl": 84,
       "metric_min": 20.4,
-      "metric_median": 26.3,
+      "metric_median": 26.4,
       "metric_max": 93.6,
       "metric_why": null,
       "metric_cov": 100,
-      "metric_n": 1214,
+      "metric_n": 1213,
       "metric_since": null,
       "val_cheap": 16,
       "yoy": 34.9,
@@ -2216,7 +2220,6 @@
         }
       ],
       "spark": [
-        2160.0,
         2215.0,
         2210.0,
         2230.0,
@@ -2280,6 +2283,7 @@
         1805.0,
         1795.0,
         1675.0,
+        1620.0,
         1620.0
       ],
       "quality": {
@@ -2291,7 +2295,7 @@
         "years": 5
       },
       "fund": 87,
-      "composite": 34,
+      "composite": 35,
       "label": "時機差（貴＋貪婪）",
       "alt": null,
       "thesis": "<b>本業：電源與散熱</b>——把電從插座送進晶片的那一整段（伺服器電源 PSU、高壓直流 HVDC、機櫃液冷），另外還有電動車動力、工業與樓宇自動化。<br>AI 已經是主力而不是題材：2026Q1 AI 相關約占營收四成（電源 ~30%、散熱 ~9%），AI 伺服器電源市占約 5–6 成；±400V 下半年量產、800V 2027 放量。<br>⚠ 它是<b>賣鏟子的</b>——資料中心繼續蓋就有單，不用賭哪家 CSP 贏。代價是這件事人人都知道，估值很難便宜。<br><i>持有理由與論點破待補。</i>",
@@ -2300,18 +2304,18 @@
     {
       "code": "1815",
       "name": "富喬",
-      "price": 127.5,
+      "price": 120.0,
       "metric": "pbr",
-      "metric_val": 5.44,
-      "metric_pctl": 94,
+      "metric_val": 5.12,
+      "metric_pctl": 91,
       "metric_min": 0.65,
       "metric_median": 1.22,
       "metric_max": 7.5,
       "metric_why": "區間內只有 63% 的交易日有本益比（虧損時沒有），改用股價淨值比",
       "metric_cov": 63,
-      "metric_n": 1214,
+      "metric_n": 1213,
       "metric_since": null,
-      "val_cheap": 6,
+      "val_cheap": 9,
       "yoy": 79.2,
       "revenue_history": [
         {
@@ -2496,7 +2500,6 @@
         }
       ],
       "spark": [
-        90.1,
         96.2,
         95.1,
         94.8,
@@ -2560,7 +2563,8 @@
         135.0,
         126.0,
         126.0,
-        127.5
+        127.5,
+        120.0
       ],
       "quality": {
         "score": 10,
@@ -2571,7 +2575,7 @@
         "years": 5
       },
       "fund": 100,
-      "composite": 33,
+      "composite": 35,
       "label": "時機差（貴＋貪婪）",
       "alt": null,
       "thesis": "<b>本業：玻璃纖維紗＋玻纖布</b>（PCB 最上游材料）。少數「紗布一貫化」廠——從熔爐抽絲到織布自己做。轉型重點是低介電 Low Dk 高階玻纖布，供 AI 伺服器主機板。是欣興這類載板／PCB 廠的上游供應商。<br><i>持有理由與論點破待補。</i>",
@@ -2580,16 +2584,16 @@
     {
       "code": "5475",
       "name": "德宏",
-      "price": 175.0,
+      "price": 176.0,
       "metric": "pbr",
-      "metric_val": 20.42,
+      "metric_val": 20.54,
       "metric_pctl": 90,
       "metric_min": 0.94,
       "metric_median": 2.02,
       "metric_max": 56.98,
       "metric_why": "區間內只有 30% 的交易日有本益比（虧損時沒有），改用股價淨值比",
       "metric_cov": 30,
-      "metric_n": 1214,
+      "metric_n": 1213,
       "metric_since": null,
       "val_cheap": 10,
       "yoy": 271.9,
@@ -2776,7 +2780,6 @@
         }
       ],
       "spark": [
-        238.0,
         240.0,
         238.5,
         230.5,
@@ -2840,7 +2843,8 @@
         190.0,
         193.0,
         184.5,
-        175.0
+        175.0,
+        176.0
       ],
       "quality": {
         "score": 0,
@@ -2851,7 +2855,7 @@
         "years": 5
       },
       "fund": 100,
-      "composite": 35,
+      "composite": 36,
       "label": "時機差（貴＋貪婪）",
       "alt": null,
       "thesis": "<b>本業：印刷電路基層板、玻璃布</b>——跟富喬同一個產業（玻纖布），<b>不是 AI 視覺</b>（2026-09-11 查證更正）。<br><i>持有理由與論點破待補。</i>",
