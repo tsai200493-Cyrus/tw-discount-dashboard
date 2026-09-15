@@ -6,3 +6,6 @@ __pycache__/
 # 警鈴的暫存檔（只在 Action 執行當下存在）
 alert_title.txt
 alert_body.md
+
+# 圖示 CSS 的中間產物（正本已貼進 docs/index.html）
+tools/icons.css
