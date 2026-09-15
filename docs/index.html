@@ -615,8 +615,10 @@ async function hsBuild(code){
   const mKey=(meta&&meta.metric==="pbr")?"PBR":"PER";
   HS._mName=mKey;
   const today=new Date().toISOString().slice(0,10);
+  // 客製起算日可能比 8.5 年更早（循環股設到 2010）：沒抓到那一天，圖的最後一天就跟卡片對不上
+  const perFrom=(perSince && perSince<shiftDays(today,-3100)) ? perSince : shiftDays(today,-3100);
   const [per,px,tx,rev]=await Promise.all([
-    fmGet("TaiwanStockPER",code,shiftDays(today,-3100),today),   // 位階看前5年 → 要比回測區間多抓5年
+    fmGet("TaiwanStockPER",code,perFrom,today),   // 位階看前5年 → 要比回測區間多抓5年；客製起算日更早就抓到那天
     fmGet("TaiwanStockPrice",code,shiftDays(today,-2000),today),
     fmGet("TaiwanStockPrice","TAIEX",shiftDays(today,-2300),today),
     fmGet("TaiwanStockMonthRevenue",code,shiftDays(today,-2400),today),
@@ -1127,7 +1129,7 @@ function render(d){
     "<li>今日變化 ▲▼：分數跟「上一個交易日」比。▲＝時機變好（更便宜／更恐慌），▼＝變差。同一天重跑不會洗掉基準。</li>"+
     "<li>分區：打折中（≥65）預設展開，觀察／太貴收成一列——點任一列展開細節。</li>"+
     "<li>營收動能📊：展開後點「營收動能」看歷年月營收與 YoY 成長率圖。</li>"+
-    "<li>比較區間（標準／客製）：位階預設跟「自己近 5 年」比。少數股票在 <code>watchlist.txt</code> 設了 <code>@since</code> 起算日（業態變過、舊資料不可比），切到「客製」就改跟那一段比。<b>兩套數字都在，隨時可以對照</b>——縮短區間通常會讓股票看起來比較便宜，看得到標準版才不會騙自己。</li>"+
+    "<li>比較區間（標準／客製）：位階預設跟「自己近 5 年」比。切到「客製」改跟「這家公司現在這個樣子」的全部歷史比：業態變過的從營益率台階那一季起算（區間變短），循環股拉長到涵蓋完整循環（區間變長）。每一檔的起算日與理由寫在 <code>watchlist.txt</code>，卡片上也看得到。<b>兩套數字都在，隨時可以對照</b>——縮短區間通常會讓股票看起來比較便宜，看得到標準版才不會騙自己。</li>"+
     "<li>股價漲跌：現價旁邊是「最新交易日」與「近 3 月」的漲跌幅。<b>紅漲綠跌</b>（台股慣例；在這裡剛好也一致——漲＝變貴＝紅）。資料每交易日收盤後更新，不是即時報價。</li>"+
     "<li>歷史回測🕰：展開後點「🕰 歷史回測」，會把同一套公式對過去每一個交易日各算一次。手指按著左右滑＝時光倒流到那一天，讀數就是當時的進場時機／PER 位階／營收 YoY／大盤恐慌。可切「進場時機／股價／疊圖」與 1～5 年。</li>"+
     "<li>論點：你自己記下「為什麼持有、什麼情況算論點破」。大跌時回來重讀，決定加碼還是認賠——治「看成本價捨不得賣」。</li>";
