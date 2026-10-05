@@ -146,6 +146,7 @@
   .d-v.pos{color:var(--open)} .d-v.neg{color:var(--shut)}
   .meter{letter-spacing:2px;font-size:.72rem;margin-right:5px}
   .qtag{font-size:.68rem;padding:0 6px;border-radius:4px;border:1px solid var(--accent);color:var(--accent);margin-left:3px}
+  .qtag.gl{border-color:var(--open);color:var(--open);margin-left:8px;font-weight:500;vertical-align:2px;white-space:nowrap}
   .perblk{margin-top:18px}
   .perblk-t{font-size:.72rem;color:var(--muted);margin-bottom:8px}
   .perblk-t b{color:var(--ink);font-variant-numeric:tabular-nums}
@@ -356,6 +357,7 @@ const GLOSSARY = {
     <div class="label" style="margin-top:9px">這是情境傾向，不是買賣訊號。</div>`,
   val_cheap:"估值便宜度：這檔的估值（本益比，或虧損過的股票用股價淨值比），站在它自己比較區間的高低位置。越低（越接近自己的便宜區）分數越高（＝100 − 位階）。回答「相對它自己，現在便宜還貴」。比較區間預設近 5 年。",
   fund:"基本面：公司賺不賺錢、在成長還衰退。用最新月營收年增率（YoY）換算，成長越猛分數越高。單月有雜訊，想看趨勢就點「營收動能」看歷年圖。",
+  goodline:"好公司打折線：財務指紋 ≥80 的好公司，位階 ≤60% 就亮這個標籤。<br><br>為什麼不等 ≤30%：2026-10 用清單裡指紋 ≥80 的 6 檔回測（2013 起每天進場、看一年後）——位階 ≤30% 買，一年後中位數 +25%、跌超過 20% 的機率 9%；45～60% 買是 +22%、6%，結果差不多，但能進場的日子多一倍（約 44% 對 21%）。好公司很少真的跌到 ≤30%，死等會一直錯過。<br><i class='ic ic-warn'></i> 只是標籤，<b>不改進場時機分數</b>（歷史回測照舊可比）。回測的 6 檔是「現在看來」的好公司＝事後挑的贏家，結果偏樂觀；指紋掉到 80 以下，標籤自動消失。",
   quality:"財務指紋（品質）：這是不是一門「好生意」——用近幾完整年的 ROE（股東權益報酬率）＋毛利率水準與穩定度＋營益率算，滿分 100。跟「基本面」互補：基本面看『營收現在衝不衝』（短期動能），品質看『賺錢賺得久不久、穩不穩』（長期體質）。<i class='ic ic-warn'></i> 刻意不併入進場時機——它回答『該不該擁有』，不是『現在時機好不好』。",
   per:"PER（本益比）：股價 ÷ 每股盈餘。買一塊錢的獲利要付幾塊，數字越大＝買得越貴。",
   pbr:"PBR（股價淨值比）：股價 ÷ 每股淨值。買一塊錢的資產要付幾塊，數字越大＝買得越貴。<br><br>這檔改用 PBR，是因為它<b>虧損過</b>——公司虧錢時沒有本益比（分母是負的或趨近 0），那段日子的 PER 在資料裡是空的。如果照樣用 PER 算位階，等於「只跟有賺錢的那半個循環比」，會把景氣頂部誤讀成便宜。淨值不會消失，所以改用 PBR。",
@@ -1095,19 +1097,31 @@ function modeSwitchHTML(d){
     `<span class="ms-n">${n} 檔有客製起算日</span></div>`;
 }
 
+// ［決策 2026-10-05｜需求人］這些代號暫時不亮「好公司打折線」。
+//   前提：該檔的 PER 位階因資料源問題失真，標籤會放大假訊號；分數本身的錯誤另外修。
+//   已知代價：資料修好後若忘了拿掉，這檔真的打折時也不會亮標籤。
+//   ⇒ 排錯線索：某檔該亮卻沒亮，先查這裡。
+const GOODLINE_SKIP = {
+  // 何時拿掉：新股 10/14 才發完；FinMind 的近四季 EPS 是各季原始公布值（舊股數），
+  //   要等含新股數的財報累積進近四季，PER 才回正常——至少 11 月 Q3 財報後先比對一次「股價÷近四季EPS」是否合理。
+  "6669": "2026-09-02 除權（股票股利），股價一天 7800→2790；FinMind 用除權後股價除除權前 EPS，PER 掉到 6.7 倍",
+};
+
 // ── 一檔股票＝一個 <details>：收合是一列（整列可點）、展開才是細節 ──
 function stockCard(s, prevScore, openByDefault){
   const dream = s.composite==null;
   const band  = dream?"dream" : s.composite>=65?"open" : s.composite>=45?"half" : "shut";
   const tag   = dream?"無法評分" : (s.label||"").split(/[（(]/)[0];
   const c = priceChg(s.spark);
+  // 好公司打折線：只加標籤、不動 composite（需求人 2026-10-05 選定，回測依據寫在 GLOSSARY.goodline）
+  const good  = !dream && !GOODLINE_SKIP[s.code] && s.quality && s.quality.score>=80 && s.metric_pctl!=null && s.metric_pctl<=60;
   const acts  = `<div class="s-acts">
         <button class="act hslink lb" data-code="${s.code}"><i class="ic ic-back"></i>歷史回測</button>
         <button class="act rmlink ionly" data-code="${s.code}" aria-label="移除" title="從追蹤清單移除"><i class="ic ic-trash"></i></button>
       </div>`;
   const row = `<summary class="s-row">
       <div class="r-main">
-        <div class="r-name">${s.name||""}<span class="s-code">${s.code}</span></div>
+        <div class="r-name">${s.name||""}<span class="s-code">${s.code}</span>${good?`<span class="qtag gl">好公司打折線</span>`:""}</div>
         <div class="r-sub">現價 <b>${esc(s.price)}</b>${chgHTML(c.day)}${
           c.q3==null?"":`<span class="r-q3">近3月 ${chgTxt(c.q3)}</span>`}</div>
       </div>
@@ -1130,6 +1144,7 @@ function stockCard(s, prevScore, openByDefault){
     const yoyCls = s.yoy==null?"":(s.yoy>=0?"pos":"neg");
     body = `<div class="s-body">
         <div class="s-line">${term('composite','進場時機')} <b>${s.composite}</b> / 100　·　${s.label}</div>
+        ${good?`<div class="s-line">${term('goodline','好公司打折線')}：指紋 <b>${s.quality.score}</b>、位階 <b>${s.metric_pctl}%</b> ≤ 60%——對好公司來說已經算打折，可以考慮分批。</div>`:""}
         <div class="data">
           <div class="d-item"><span class="d-k"><i class="ic ic-tag"></i>${s.metric==="pbr"?term('pbr','PBR'):term('per','PER')} ${term('pctl','位階')}</span><span class="d-v">${esc(s.metric_val)} · ${esc(s.metric_pctl)}%</span></div>
           <div class="d-item"><span class="d-k"><i class="ic ic-sale"></i>${term('val_cheap','估值便宜度')}</span><span class="d-v">${esc(s.val_cheap)}</span></div>
