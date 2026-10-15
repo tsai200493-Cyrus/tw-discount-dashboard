@@ -686,6 +686,13 @@ async function hsBuild(code){
     fmGet("TaiwanStockMonthRevenue",code,shiftDays(today,-2400),today),
   ]);
   if(!px.length) throw new Error("查無這檔股票的股價，確認一下代號？");
+  // 配股校正：係數由 build_data.share_base_fix 算好寫進 data.json（per_fix），這裡只套用。
+  // 刻意不在瀏覽器重算一次——同一套判斷有兩份實作，遲早會對不上（檔頭那條「獨立複本」警告）。
+  const pf = meta && meta.per_fix;
+  if(pf){
+    per.forEach(r=>{ if(r.date>=pf.from){ if(r.PER) r.PER*=pf.factor; if(r.PBR) r.PBR*=pf.factor; } });
+    px.forEach(r=>{ if(r.date<pf.from) r.close/=pf.factor; });   // 股價圖去掉除權斷崖
+  }
   const pr=px.slice().sort((a,b)=>a.date<b.date?-1:1);
   const tr=tx.slice().sort((a,b)=>a.date<b.date?-1:1);
   const fear=fearSeries(tr.map(r=>r.close));           // 大盤恐慌度：逐日
@@ -1085,6 +1092,7 @@ function perBlock(s){
       `<span class="hi">貴 ${hi}</span></div>`+
       (s.metric_why?`<div class="perwhy"><i class="ic ic-info"></i> 這檔用${mName}，不用本益比：${s.metric_why}</div>`:"")+
       (s.since_why?`<div class="perwhy"><i class="ic ic-info"></i> 比較區間改過（${win}）：${s.since_why}</div>`:"")+
+      (s.per_fix?`<div class="perwhy"><i class="ic ic-info"></i> 已校正配股失真：${s.per_fix.from} 配股後股數變 ${s.per_fix.factor.toFixed(2)} 倍，資料源的每股盈餘還停在配股前，${mName}被壓低了同樣倍數——這裡乘回來，整段歷史才同一把尺。</div>`:"")+
     `</div>`;
 }
 
@@ -1098,14 +1106,13 @@ function modeSwitchHTML(d){
 }
 
 // ［決策 2026-10-05｜需求人］這些代號暫時不亮「好公司打折線」。
-//   前提：該檔的 PER 位階因資料源問題失真，標籤會放大假訊號；分數本身的錯誤另外修。
+//   前提：該檔的 PER 位階因資料源問題失真，標籤會放大假訊號。
 //   已知代價：資料修好後若忘了拿掉，這檔真的打折時也不會亮標籤。
 //   ⇒ 排錯線索：某檔該亮卻沒亮，先查這裡。
-const GOODLINE_SKIP = {
-  // 何時拿掉：新股 10/14 才發完；FinMind 的近四季 EPS 是各季原始公布值（舊股數），
-  //   要等含新股數的財報累積進近四季，PER 才回正常——至少 11 月 Q3 財報後先比對一次「股價÷近四季EPS」是否合理。
-  "6669": "2026-09-02 除權（股票股利），股價一天 7800→2790；FinMind 用除權後股價除除權前 EPS，PER 掉到 6.7 倍",
-};
+// 2026-10-15 清空：配股失真改由 build_data.share_base_fix 自動偵測＋校正，
+//   對不上就整檔不計分（composite=null，本來就不會亮標籤），不必再逐檔手動列。
+//   機制保留——將來遇到「分數堪用但不想亮標籤」的狀況還是從這裡加。
+const GOODLINE_SKIP = {};
 
 // ── 一檔股票＝一個 <details>：收合是一列（整列可點）、展開才是細節 ──
 function stockCard(s, prevScore, openByDefault){
@@ -1134,8 +1141,13 @@ function stockCard(s, prevScore, openByDefault){
 
   let body;
   if(dream){
+    // data_warn＝估值資料本身可疑（build_data.share_base_fix 兩個來源對不上）：
+    // 這不是「沒有本益比」，是「有但不可信」，說法要分開，否則會被當成夢股。
     body = `<div class="s-body">
-        <div class="s-line">${s.label} — 無本益比可評分，屬新藥/夢股，請用賭注 size 對待。${
+        <div class="s-line">${s.data_warn
+          ? `<i class="ic ic-warn"></i> 估值資料異常，這次不給分數：${esc(s.data_warn)}。`
+            +`在對得上之前寧可沒數字，也不要給你一個錯的。`
+          : `${s.label} — 無本益比可評分，屬新藥/夢股，請用賭注 size 對待。`}${
           s.revenue_history&&s.revenue_history.length?" "+chartLink(s.code):""}</div>
         ${thesisHTML(s)}${acts}
       </div>`;

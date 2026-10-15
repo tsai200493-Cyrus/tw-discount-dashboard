@@ -183,8 +183,10 @@ def margin_context():
     return note
 
 
-def value_band(code, since=None):
-    """估值位階。預設用本益比（PER）；PER 覆蓋率太低時自動改用股價淨值比（PBR）。
+def _band(rows, start, code, eff_since):
+    """估值位階：把某個起算日的視窗算成位階。eff_since=None 代表標準（近 5 年）那一套。
+
+    預設用本益比（PER）；PER 覆蓋率太低時自動改用股價淨值比（PBR）。
 
     ［決策 2026-09-11｜需求人］換不換尺看「資料覆蓋率」，不看「數值極不極端」。
       前提：公司虧損時 FinMind 的 PER 是空值，而缺的那段正是景氣循環的谷底。
@@ -199,21 +201,9 @@ def value_band(code, since=None):
       ⇒ 排錯線索：某檔便宜度突然大變，先看卡片標的是 PER 還是 PBR，
         以及覆蓋率是不是剛好跨過 85% 門檻。
 
-    TaiwanStockPER 這支 API 同時回 PER 與 PBR，換尺不用多打一次。
-
-    網站可以在「標準（近 5 年）」與「客製（@since 起算）」之間切換，所以兩套
-    都要算出來寫進 data.json——抓一次資料、算兩次視窗，不會多打 API。
+    TaiwanStockPER 這支 API 同時回 PER 與 PBR，換尺不用多打一次；呼叫端抓一次
+    資料、用兩個起算日各算一次視窗（標準／客製），不會多打 API。
     """
-    default_start = (dt.date.today() - dt.timedelta(days=PER_DEFAULT_DAYS)).isoformat()
-    rows = _get("TaiwanStockPER", code, min(since, default_start) if since else default_start)
-    if isinstance(rows, dict) or not rows:
-        return None
-    rows = sorted(rows, key=lambda x: x["date"])
-    return _band(rows, since or default_start, code, since)
-
-
-def _band(rows, start, code, eff_since):
-    """把某個起算日的視窗算成位階。eff_since=None 代表這是標準（近 5 年）那一套。"""
     win = [r for r in rows if r["date"] >= start]
     if len(win) < PER_MIN_SAMPLES:
         return None
@@ -263,15 +253,128 @@ def revenue_data(code):
     return {"latest_yoy": hist[-1]["yoy"], "history": hist[-36:]}
 
 
-def price_series(code):
-    """近 ~130 天日收盤：最新收盤 + 近 65 筆（現價火花線用）。"""
+def price_series(code, fix=None):
+    """近 ~130 天日收盤：最新收盤 + 近 65 筆（現價火花線用）。
+
+    fix 有值時把除權日之前的收盤換算到「今天的股數」，否則火花線會有一道
+    斷崖（緯穎 7800→2610），卡片上的區間漲跌會顯示成假崩盤 -70%。
+    """
     start = (dt.date.today() - dt.timedelta(days=130)).isoformat()
     rows = _get("TaiwanStockPrice", code, start)
     if isinstance(rows, dict) or not rows:
         return None
     rows = sorted(rows, key=lambda x: x["date"])
-    closes = [round(r["close"], 2) for r in rows]
+    f, ex = (fix["factor"], fix["from"]) if fix else (1.0, None)
+    closes = [round(r["close"] / f, 2) if (ex and r["date"] < ex) else round(r["close"], 2)
+              for r in rows]
     return {"last": closes[-1], "spark": closes[-65:]}
+
+
+# ── 配股（盈餘轉增資）造成的「分母沒跟上」校正 ──────────────────────
+STEP_TOL = 0.12      # 跳階比值離 1 多遠才算「真的跳了」（低於此＝公司自身雜訊）
+MATCH_TOL = 0.10     # 跳階幅度要跟配股公告對到 10% 以內才採用
+
+
+def _share_bias(fs_rows, bs_rows):
+    """逐季算「股本推得的股數 ÷ EPS 推得的股數」。
+
+    這個比值不會等於 1，而且每家公司各有各的固定落差：IncomeAfterTaxes 含少數股權、
+    EPS 用的是加權平均股數，再加上庫藏股與員工認股。實測台達電長年 0.87、
+    群創 0.98。所以判準是「它有沒有跳階」，不是「它等不等於 1」——
+    2026-10-15 第一版用後者，一口氣誤擋了 14 檔裡的 5 檔。
+    """
+    cap = {r["date"]: r["value"] for r in bs_rows
+           if r.get("type") == "CapitalStock" and r.get("value")}
+    eps = {r["date"]: r["value"] for r in fs_rows
+           if r.get("type") == "EPS" and r.get("value")}
+    ni = {r["date"]: r["value"] for r in fs_rows
+          if r.get("type") == "IncomeAfterTaxes" and r.get("value")}
+    out = {}
+    for d in cap:
+        if d in eps and d in ni and eps[d] and ni[d] / eps[d] > 0:
+            out[d] = (cap[d] / 10) / (ni[d] / eps[d])
+    return out
+
+
+def share_base_fix(code):
+    """偵測「FinMind 的每股數字還停在配股前的股數」，回傳校正係數。
+
+    回傳 {"factor": f, "from": 除權日}  → 把該日起的 PER／PBR 乘上 f
+         None                          → 一致，什麼都不用做
+         ("refuse", 原因)              → 兩個來源對不起來，本次不計分
+
+    ［決策 2026-10-15｜需求人］係數每次 build 現算，不寫死，也不設到期日。
+      前提：FinMind 的 TaiwanStockPER 分子用除權後股價、分母用各季「原始公布」的 EPS。
+        配股當天股數變多、股價等比例下修，但已公布的舊 EPS 不會追溯重編，於是
+        除權日之後的 PER／PBR 整段被壓低（緯穎 6669：9/1 的 25.01 → 9/2 的 8.37）。
+        PBR 同步被壓低，所以「覆蓋率不足改用 PBR」那條備援救不了這個洞。
+      為什麼堅持要兩個獨立來源才動手：
+        ① 除權公告（TaiwanStockDividend 的股票股利）說「該乘多少」——精確值，拿來當係數。
+        ② 股數跳階（_share_bias 最新一季 ÷ 歷季中位數）說「現在到底還歪不歪」——拿來當開關。
+        沒跳階就什麼都不做。FinMind 哪天把 EPS 補正，EPS 推得的股數跟著變大、
+        ②自動回到 1，這段程式自己退休，不需要有人記得回來拆，也不會變成雙重校正。
+        ①②對不上（例如 FinMind 只補正了其中一季）＝我們看不懂現況 → 不猜，停手並警告。
+      已知代價：
+        ⒜ 只修「最近一次」配股。更早的配股在它當年的失真期間仍留在位階基準裡，
+           那些點偏便宜。影響小，不處理。
+        ⒝ 配股小於約 1.5 元（係數 1.15）會被當成雜訊放過——台達電這類公司光是
+           少數股權就讓比值飄到 1.07。小配股造成的失真本來也小，不值得冒誤判的險。
+        ⒞ 除權後、含新股數的資產負債表出來前，兩邊都還是舊股數＝測不到跳階，
+           這段期間不會校正。方向是安全的（寧可不動），但不是沒有空窗。
+        ⒟ 若 FinMind 改成提供還原股價（把除權前股價往下調），②量的是 EPS 那一側、
+           量不到價格那一側，會變成「除權後修對、除權前反而被壓低」。機率低
+           （這條序列是照抄 TWSE 每日公布值，TWSE 不回頭改），但不是零。
+      ⇒ 排錯線索：某檔便宜度突然大變，先看 Action log 有沒有本函式的 notice／warning，
+        再看 data.json 的 per_fix 欄位。
+    """
+    start = f"{dt.date.today().year - 3}-01-01"
+    fs = _get("TaiwanStockFinancialStatements", code, start)
+    bs = _get("TaiwanStockBalanceSheet", code, start)
+    if isinstance(fs, dict) or isinstance(bs, dict) or not fs or not bs:
+        return None                       # 查不到財報就當沒事，不冒然停掉計分
+    bias = _share_bias(fs, bs)
+    if len(bias) < 4:
+        return None
+    step = bias[max(bias)] / st.median(bias.values())
+    if abs(step - 1) <= STEP_TOL:
+        return None                       # 沒跳階（FinMind 補正後也走這條）
+
+    dv = _get("TaiwanStockDividend", code, start)
+    events = sorted(
+        (r["StockExDividendTradingDate"],
+         1 + ((r.get("StockEarningsDistribution") or 0)
+              + (r.get("StockStatutorySurplus") or 0)) / 10)
+        for r in (dv if isinstance(dv, list) else [])
+        if r.get("StockExDividendTradingDate")
+        and (r.get("StockEarningsDistribution") or 0) + (r.get("StockStatutorySurplus") or 0) > 0
+    )
+    if events:
+        ex, factor = events[-1]
+        if abs(step - factor) / factor <= MATCH_TOL:
+            print(f"::notice::{code} 每股數字仍停在 {ex} 配股前的股數"
+                  f"（股數跳階 {step:.3f}、配股公告 {factor:.3f}）"
+                  f" → {ex} 起的 PER/PBR ×{factor:.4f}")
+            return {"factor": round(factor, 6), "from": ex}
+
+    why = (f"股本與 EPS 推得的股數差了 {step:.2f} 倍，但找不到對得上的配股紀錄")
+    print(f"::warning::{code} {why} → 本次不校正、不計分")
+    return ("refuse", why)
+
+
+def apply_share_fix(rows, fix):
+    """把除權日（含）之後的 PER／PBR 乘回配股前的尺度，讓整段歷史同一把尺。"""
+    if not fix:
+        return rows
+    f, ex = fix["factor"], fix["from"]
+    out = []
+    for r in rows:
+        if r["date"] >= ex:
+            r = dict(r)
+            for k in ("PER", "PBR"):
+                if r.get(k):
+                    r[k] = r[k] * f
+        out.append(r)
+    return out
 
 
 def load_thesis():
@@ -396,22 +499,28 @@ def build_stock(code, name, mkf, since=None, why=None):
     default_start = (dt.date.today() - dt.timedelta(days=PER_DEFAULT_DAYS)).isoformat()
     rows = _get("TaiwanStockPER", code, min(since, default_start) if since else default_start)
     rows = sorted(rows, key=lambda x: x["date"]) if isinstance(rows, list) else []
-    vb = _band(rows, default_start, code, None) if rows else None   # 標準：一律近 5 年
-    alt = _band(rows, since, code, since) if (rows and since) else None   # 客製：@since 起算
-    if since and alt is None:
+    fix = share_base_fix(code)
+    refuse = fix[1] if isinstance(fix, tuple) else None   # 看不懂現況 → 寧可沒分數
+    if refuse:
+        fix = None
+    rows = apply_share_fix(rows, fix)
+    vb = None if refuse else (_band(rows, default_start, code, None) if rows else None)
+    alt = _band(rows, since, code, since) if (rows and since and not refuse) else None
+    if since and alt is None and not refuse:
         print(f"::warning::{code} 自 {since} 起樣本不足 {PER_MIN_SAMPLES}，客製版跳過")
     rd = revenue_data(code)
-    ps = price_series(code)
+    ps = price_series(code, fix)
     price = ps["last"] if ps else None
     spark = ps["spark"] if ps else None              # 近65日收盤（火花線）
     quality = quality_fingerprint(code)              # 財務指紋（品質），與進場時機分開
     yoy = rd["latest_yoy"] if rd else None          # 單月 YoY（計分＋顯示）
     history = rd["history"] if rd else None          # 近36月明細（圖表用）
-    if vb is None:  # 估值算不出來 → 本夢比，排除評分
+    if vb is None:  # 估值算不出來（本夢比），或估值資料本身可疑 → 一律排除評分
         return {"code": code, "name": name, "price": price, "metric": None,
                 "metric_val": None, "metric_pctl": None, "val_cheap": None, "yoy": yoy,
                 "revenue_history": history, "spark": spark, "quality": quality,
-                "fund": None, "composite": None, "label": "資料不足(本夢比)"}
+                "per_fix": fix, "data_warn": refuse, "fund": None, "composite": None,
+                "label": "資料異常(暫不評分)" if refuse else "資料不足(本夢比)"}
     val_cheap = 100 - vb["pctl"]
     fund = None if yoy is None else round(clamp(45 + yoy * 1.2))
     composite = round(W_VALUE * val_cheap + W_FUND * (fund if fund is not None else 45)
@@ -433,7 +542,8 @@ def build_stock(code, name, mkf, since=None, why=None):
             "metric_why": vb["why"], "metric_cov": vb["coverage"], "metric_n": vb["n"],
             "metric_since": vb["since"],
             "val_cheap": val_cheap, "yoy": yoy, "revenue_history": history,
-            "spark": spark, "quality": quality, "fund": fund, "composite": composite,
+            "spark": spark, "quality": quality, "per_fix": fix,
+            "fund": fund, "composite": composite,
             "label": window_label(composite), "alt": alt_out}
 
 
