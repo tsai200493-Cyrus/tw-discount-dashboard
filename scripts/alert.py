@@ -25,7 +25,11 @@ DATA = ROOT / "docs" / "data.json"
 STATE = ROOT / "alert_state.json"
 
 # (門檻, 名稱, 重新上膛線)：跌回上膛線以下，這個鈴才會重新武裝
+# 80 這顆是 2026-10-16 跟著恐慌度第四格一起加的：回測（TAIEX 2000-2026、
+# 持有一年）顯示 65-79 一年後中位 +9.8%、>=80 是 +20.0%，兩者差一倍以上。
+# 不分開的話，三年才一次的機會跟普通恐慌會收到一模一樣的通知。
 BELLS = [
+    (80, "極度恐慌鈴", 65),
     (65, "進場鈴", 50),
     (50, "預備鈴", 40),
 ]
@@ -144,8 +148,11 @@ def main():
         if first_run:
             print(f"首次建檔，恐慌度 {score}，本次不發通知（避免建檔當天的假警報）")
         else:
-            print(f"恐慌度 {score}，未觸發。"
-                  f"上膛狀態：{ {k: v for k, v in armed.items()} }")
+            # 從 BELLS 列印而不是從 armed：新加的鈴在第一次響之前不會出現在狀態檔裡，
+            # 直接印 armed 會看起來像漏了一顆（預設 True＝已上膛才是對的）
+            print(f"恐慌度 {score}，未觸發。上膛狀態："
+                  + "、".join(f"{n} {'已上膛' if armed.get(str(t), True) else '待重置'}"
+                              for t, n, _ in BELLS))
 
     state["last_score"] = score
     STATE.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n",
