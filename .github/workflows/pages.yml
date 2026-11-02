@@ -1,0 +1,52 @@
+name: 發布網站（加密）
+
+# 網站不再直接拿 docs/ 發佈：先把 index.html 加密成密碼頁，再交給 GitHub Pages。
+# 資料更新那兩支 Action 用 GITHUB_TOKEN 推的 commit 不會觸發 push，所以另外接 workflow_run。
+on:
+  push:
+    branches: [main]
+    paths: ["docs/**", ".github/seal.py", ".github/site_salt.txt", ".github/workflows/pages.yml"]
+  workflow_run:
+    workflows: ["更新打折窗口資料", "新增／移除追蹤（處理 Issue）"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4      # workflow_run 時拿的是 main 最新一版，含剛推上的 data.json
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install cryptography==43.0.3
+
+      # data.json 不加密：repo 是公開的，它本來就在 GitHub 上看得到，加密發佈的那份擋不了什麼
+      - name: 打包並加密 index.html
+        env:
+          SITE_PASSWORD: ${{ secrets.SITE_PASSWORD }}
+        run: |
+          mkdir _site
+          cp -r docs/. _site/
+          python .github/seal.py docs/index.html _site/index.html --store tw-discount-dashboard-key
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deploy
+        uses: actions/deploy-pages@v4
