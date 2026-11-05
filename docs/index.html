@@ -1542,8 +1542,9 @@ function render(d){
   window.DATA=d;
   const m=d.market||{}, W=d.weights||{value:.4,fund:.25,market:.35};
   const gen=(d.generated_at||"").replace("T"," ").replace("+00:00"," UTC");
-  $id("sub").textContent="資料日 "+(m.date||"—")+"　·　產出 "+gen;
-  $id("hdate").textContent=(m.date||"").slice(5).replace("-",".")+" CLOSE";
+  const live=d.intraday&&d.intraday.time;     // 盤中暫估：18:00 正式版會蓋掉
+  $id("sub").textContent="資料日 "+(m.date||"—")+(live?"　·　盤中暫估 "+live+"（18:00 收盤後以正式資料更新）":"　·　產出 "+gen);
+  $id("hdate").textContent=(m.date||"").slice(5).replace("-",".")+(live?" LIVE "+live:" CLOSE");
   ROOT.style.setProperty("--tone", `var(--t-${moodOf(m.score)})`);
 
   const V=(d.stocks||[]).map(x=>({raw:x, v:view(x)}));

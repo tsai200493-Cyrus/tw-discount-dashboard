@@ -54,7 +54,90 @@ def _get(dataset, data_id, start_date):
         return {"_error": str(exc)}
     if payload.get("status") != 200:
         return {"_error": payload.get("msg", "unknown")}
-    return payload.get("data", [])
+    rows = payload.get("data", [])
+    if LIVE and data_id in LIVE and dataset in ("TaiwanStockPrice", "TaiwanStockPER"):
+        rows = _append_live(dataset, data_id, rows)
+    return rows
+
+
+# ── 盤中暫估 ─────────────────────────────────────────────────────────
+# FinMind 的日資料收盤後才有；盤中模式用證交所 MIS 即時報價（約 5 秒延遲）
+# 補一筆「今天」：股價直接用現價，PER／PBR 用「昨天的值 × 現價／昨收」推出來
+# （盤中 EPS、淨值不會變，所以比例換算等於 FinMind 收盤後會給的值）。
+# 18:00 的正式排程不帶 LIVE，會用 FinMind 的正式資料整份蓋過去。
+LIVE: dict = {}          # code → (現價, 昨收)；"TAIEX" 是加權指數
+MIS = "https://mis.twse.com.tw/stock/api/getStockInfo.jsp"
+TPE = dt.timezone(dt.timedelta(hours=8))
+
+
+def _mis_price(m):
+    """成交價；這一刻剛好沒成交（z 是 "-"）就退回最近一筆成交，再不行用最佳買賣價中間。"""
+    for v in (m.get("z"), (m.get("trade") or {}).get("z")):
+        if v and v != "-":
+            return float(v)
+    a = (m.get("a") or "").split("_")[0]
+    b = (m.get("b") or "").split("_")[0]
+    if a and b and a != "-" and b != "-":
+        return (float(a) + float(b)) / 2
+    return None
+
+
+def fetch_live(codes):
+    """抓即時報價填進 LIVE。回傳報價時間 "HH:MM"；今天沒開盤（假日）或抓不到回 None。
+
+    不知道每檔是上市還是上櫃，所以 tse_／otc_ 兩個頻道都問，MIS 只會回存在的那個。
+    """
+    today = dt.datetime.now(TPE).strftime("%Y%m%d")
+    chans = ["tse_t00.tw"] + [f"{ex}_{c}.tw" for c in codes for ex in ("tse", "otc")]
+    got, stamp = {}, None
+    for i in range(0, len(chans), 40):            # 一次問太多頻道 MIS 會回空
+        url = MIS + "?" + parse.urlencode({"ex_ch": "|".join(chans[i:i + 40]),
+                                           "json": 1, "delay": 0})
+        req = request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        try:
+            with request.urlopen(req, timeout=20) as resp:
+                msg = json.loads(resp.read().decode("utf-8")).get("msgArray") or []
+        except Exception as exc:  # noqa: BLE001
+            print(f"::warning::MIS 即時報價抓取失敗：{exc}")
+            return None
+        for m in msg:
+            if m.get("d") != today:                # 假日 MIS 回的是上一個交易日
+                continue
+            p, y = _mis_price(m), m.get("y")
+            if not p or not y or y == "-":
+                continue
+            key = "TAIEX" if m.get("c") == "t00" else m.get("c")
+            got[key] = (p, float(y))
+            if key == "TAIEX":
+                stamp = (m.get("t") or m.get("%") or "")[:5]
+    if "TAIEX" not in got:
+        print("::notice::今天沒有盤中報價（休市或還沒開盤）")
+        return None
+    missing = [c for c in codes if c not in got]
+    if missing:
+        print(f"::warning::這幾檔沒有盤中報價、沿用昨收：{', '.join(missing)}")
+    LIVE.update(got)
+    return stamp
+
+
+def _append_live(dataset, code, rows):
+    if isinstance(rows, dict) or not rows:
+        return rows
+    today = dt.datetime.now(TPE).date().isoformat()
+    rows = sorted(rows, key=lambda r: r["date"])
+    if rows[-1]["date"] >= today:                 # FinMind 已經有今天的正式值，不用估
+        return rows
+    p, y = LIVE[code]
+    r = dict(rows[-1])
+    r["date"] = today
+    if dataset == "TaiwanStockPrice":
+        r["close"] = p
+    else:
+        k = p / y
+        for key in ("PER", "PBR"):
+            if r.get(key):
+                r[key] = r[key] * k
+    return rows + [r]
 
 
 def clamp(x, lo=0.0, hi=100.0):
@@ -415,7 +498,9 @@ def load_prev(mk_date):
     except Exception:  # noqa: BLE001 — 舊檔壞掉不該擋住這次產出
         return {}
     old_date = (old.get("market") or {}).get("date")
-    if old_date and mk_date and old_date == mk_date:
+    # >= 而不是 ==：盤中暫估的日期是「今天」，萬一 18:00 時 FinMind 還沒出今天的資料，
+    # 新算的 mk_date 會是昨天、比舊檔還舊——這時也要沿用舊檔的 prev，不能拿較新的盤中當昨天。
+    if old_date and mk_date and old_date >= mk_date:
         return old.get("prev") or {}
     return {
         "date": old_date,
@@ -578,6 +663,12 @@ def build_stock(code, name, mkf, since=None, why=None):
 
 
 def main():
+    live_at = None
+    if os.environ.get("LIVE") == "1":
+        live_at = fetch_live([w["code"] for w in load_watchlist()])
+        if not live_at:
+            print("盤中模式但沒有今天的報價 → 不更新 data.json")
+            return
     mk = market_fear()
     mkf = mk.get("score", 50)
     prev = load_prev(mk.get("date"))   # 先讀，等一下才會覆寫 data.json
@@ -599,6 +690,8 @@ def main():
         "prev": prev,
         "stocks": stocks,
         "weights": {"value": W_VALUE, "fund": W_FUND, "market": W_MARKET},
+        # 有這個欄位＝盤中暫估（網站會標出來）；18:00 正式版沒有這個欄位
+        "intraday": {"time": live_at} if live_at else None,
         "disclaimer": "溫度計不是買賣訊號。沒有模型能可靠擇時；它只給情境傾向。非投資建議，決策與風險自負。",
     }
     out = ROOT / "docs" / "data.json"

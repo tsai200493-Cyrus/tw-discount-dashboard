@@ -1,15 +1,23 @@
 name: 更新打折窗口資料
 
-# 三種觸發：① 每個交易日收盤後排程 ② 你一改 watchlist 就重跑 ③ 手動按鈕
+# 觸發：① 收盤後正式排程 ② 盤中暫估排程 ③ 你一改 watchlist 就重跑 ④ 手動按鈕
+# ⚠️ 下面判斷「是不是盤中」是比對 cron 字串，改這兩行時兩處要一起改。
 on:
   schedule:
-    - cron: "0 10 * * 1-5"      # 每週一~五 UTC 10:00（台灣 18:00，收盤後）
+    - cron: "0 10 * * 1-5"      # 每週一~五 UTC 10:00（台灣 18:00，收盤後）→ FinMind 正式資料
+    - cron: "*/30 1-5 * * 1-5"  # 台灣 09:00~13:30 每 30 分 → 盤中暫估（GitHub 排程常晚 5~30 分鐘）
+    - cron: "5 6 * * 1-5"       # 台灣 14:05 → 用收盤價先估一次，不用等到 18:00
+  workflow_dispatch:             # Actions 頁面可手動 Run
+    inputs:
+      live:
+        description: "盤中暫估（用證交所即時報價）"
+        type: boolean
+        default: false
   push:
     paths:
       - "watchlist.txt"          # 加/刪股票就自動重算
       - "thesis.json"            # 改論點就重算（把新論點帶進 data.json）
       - "scripts/**"             # 改算法（build_data.py）就自動重算
-  workflow_dispatch:             # Actions 頁面可手動 Run
 
 permissions:
   contents: write                # 允許把新的 data.json 推回 repo
@@ -22,6 +30,9 @@ concurrency:                     # 避免多次觸發互相打架
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      # 盤中＝兩個盤中排程，或手動勾 live。其他觸發都是正式版。
+      LIVE: ${{ (github.event.schedule == '*/30 1-5 * * 1-5' || github.event.schedule == '5 6 * * 1-5' || inputs.live) && '1' || '0' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -35,8 +46,10 @@ jobs:
         run: python scripts/build_data.py
 
       # 恐慌度警鈴：跨過門檻才開 Issue，遲滯邏輯在 alert.py 裡
+      # 盤中不叫：盤中分數會上下跳，叫了之後收盤又掉回去，鈴就白白用掉了（要跌回上膛線才會再叫）
       - name: 檢查恐慌度警鈴
         id: alert
+        if: env.LIVE != '1'
         run: python scripts/alert.py
 
       # 先開 Issue 再 commit 狀態：萬一 commit 失敗，明天會重叫一次（吵）；
@@ -59,5 +72,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           rm -f alert_title.txt alert_body.md
           git add docs/data.json alert_state.json
-          git diff --staged --quiet || git commit -m "chore: 更新打折窗口資料 [skip ci]"
+          msg="chore: 更新打折窗口資料"
+          [ "$LIVE" = "1" ] && msg="chore: 盤中暫估"
+          git diff --staged --quiet || git commit -m "$msg [skip ci]"
           git push
