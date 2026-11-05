@@ -216,6 +216,13 @@
   .rev:hover .lbl{color:var(--ink)}
   .rev .rv-read{letter-spacing:.04em;text-transform:none}
   .rev svg{cursor:crosshair}
+  /* 分析欄鋪淡底：交錯排版時眼角就分得出「這塊是分析、另一塊是原始數字」（2026-11-05 對照草稿 A 勝出） */
+  .ana{background:color-mix(in srgb,var(--tone) 10%,var(--panel));border-radius:14px;padding:24px 26px;align-self:start}
+  .ana .blk{border-top-color:color-mix(in srgb,var(--tone) 20%,var(--hair))}
+  @media (max-width:600px){ .ana{padding:18px 16px;border-radius:12px} }
+  .lbl .li{display:inline-block;width:13px;height:13px;vertical-align:-2px;margin-right:7px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .ana .lbl .li{color:var(--tone)}
+  .nocount{font:500 10.5px var(--sans);color:var(--ink3);border:1px dashed var(--ink3);border-radius:4px;padding:0 5px;margin-left:5px;letter-spacing:.04em;vertical-align:1px;white-space:nowrap;display:inline-block;line-height:1.5}
   .blk{padding:18px 0;border-top:1px solid var(--hair2)}
   .blk:first-child{border-top:0;padding-top:0}
   .blk>.lbl{color:var(--ink3);display:block;margin-bottom:14px}
@@ -1206,6 +1213,17 @@ function deltaHTML(cur, prev){
   if(d===0) return '<span class="delta flat">–</span>';
   return `<span class="delta ${d>0?"up":"down"}">${d>0?"▲":"▼"}${Math.abs(d)}</span>`;
 }
+// 區塊小標的小圖示（點綴用；分辨欄位靠 .ana 底色，不靠圖示）
+const LI_P={
+  rev:'<path d="M4 20V11M10 20V5M16 20v-6M2 20h20"/>',
+  why:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>',
+  score:'<path d="M4 17a8 8 0 1 1 16 0"/><path d="M12 17l4-5"/>',
+  val:'<path d="M3 18h18"/><path d="M12 18V9"/><circle cx="12" cy="6" r="2.5"/>',
+  trig:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/>',
+  good:'<path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6l-5.4 2.9 1.2-6-4.5-4.2 6.1-.7z"/>',
+  thesis:'<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13 7l4 4"/>',
+};
+const li=k=>`<svg class="li" viewBox="0 0 24 24" aria-hidden="true">${LI_P[k]}</svg>`;
 function moversHTML(d){
   const p=d.prev||{}, P=p.stocks||{};
   if(!p.date) return "";                       // 第一次產出、還沒有基準
@@ -1373,7 +1391,7 @@ function revHTML(s){
     g+=`<rect class="rbar" data-i="${i}" data-f="${fill}" data-o="${op}" x="${(i*bw+bw*.18).toFixed(1)}" y="${(70-h).toFixed(1)}" width="${(bw*.64).toFixed(1)}" height="${h.toFixed(1)}" fill="${fill}" opacity="${op}"/>`;
     hits+=`<rect class="hit" data-i="${i}" x="${(i*bw).toFixed(1)}" y="0" width="${bw.toFixed(1)}" height="84" fill="transparent"/>`;
     if(r.ym.endsWith("-01")) g+=`<text x="${(i*bw).toFixed(1)}" y="83" font-size="9" fill="var(--ink3)" font-family="Space Grotesk,sans-serif">${r.ym.slice(0,4)}</text>`; });
-  return `<div class="rev chartlink nolink" data-code="${s.code}" title="點開看完整營收圖"><span class="lbl"><span>Revenue · 近 ${n} 月營收</span><span class="n rv-read">${revRead(last)}</span></span>
+  return `<div class="rev chartlink nolink" data-code="${s.code}" title="點開看完整營收圖"><span class="lbl"><span>${li("rev")}Revenue · 近 ${n} 月營收</span><span class="n rv-read">${revRead(last)}</span></span>
     <svg viewBox="0 0 300 84" preserveAspectRatio="none" aria-hidden="true">${g}${hits}</svg></div>`;
 }
 // 長條右上角的讀數：平常是最新一個月；滑鼠移到哪條就換成那個月
@@ -1451,8 +1469,8 @@ function detailHTML(s, prevScore){
     return `<div class="cgrid"><div>
         <div class="price"><div class="score n" style="color:var(--dream);font-size:52px">${s.data_warn?"資料異常":"不評分"}</div>
           <div class="meta"><div class="s n">${priceLine}</div></div></div>${sparkSVG(s.spark)}${revHTML(s)}</div>
-      <div><div class="blk"><span class="lbl">Why · 為什麼不評分</span><div class="dline">${why}</div></div>
-        <div class="blk"><span class="lbl">Thesis · 論點</span>${thesisHTML2(s)}${actsHTML(s)}</div></div></div>`;
+      <div class="ana"><div class="blk"><span class="lbl">${li("why")}Why · 為什麼不評分</span><div class="dline">${why}</div></div>
+        <div class="blk"><span class="lbl">${li("thesis")}Thesis · 論點</span>${thesisHTML2(s)}${actsHTML(s)}</div></div></div>`;
   }
   const {W, m, mktPts, CEIL}=CTX, t=tierOf(s.composite), q=s.quality||{};
   const v=W.value*(s.val_cheap||0), f=W.fund*(s.fund||0), gap=LINE-s.composite;
@@ -1468,24 +1486,24 @@ function detailHTML(s, prevScore){
         <div class="meta"><div class="t">${TIERW[t]}${gap>0?`・差 ${gap} 分`:"・已在打折區"}</div><div class="s n">${priceLine}</div></div></div>
       ${sparkSVG(s.spark)}
       <div class="facts"><div>${mTerm(s)}<b>${esc(s.metric_val)}</b>${term("pctl","位階")} ${esc(s.metric_pctl)}%</div>
-        <div>${term("quality","財務指紋")}<b>${q.score??"—"}</b>${q.word||""}${q.roe!=null?"・ROE "+q.roe+"%":""}</div>
+        <div>${term("quality","財務指紋")}<span class="nocount" title="不算進進場時機分數">不計分</span><b>${q.score??"—"}</b>${q.word||""}${q.roe!=null?"・ROE "+q.roe+"%":""}</div>
         <div>營收年增<b>${s.yoy==null?"—":(s.yoy>0?"+":"")+f1(s.yoy,0)+"%"}</b>最新單月</div></div>
       ${revHTML(s)}
     </div>
-    <div>
-      <div class="blk"><span class="lbl">Score · ${term("composite","進場時機")}怎麼來的</span>
+    <div class="ana">
+      <div class="blk"><span class="lbl">${li("score")}Score ·${term("composite","進場時機")}怎麼來的</span>
         <div class="rb"><span style="width:${v}%;background:var(--ink)"></span><span style="width:${f}%;background:var(--ink3)"></span><span style="width:${mktPts}%;background:var(--tone)"></span>
           <span class="cap" style="width:${Math.max(0,100-CEIL)}%"></span><span class="ln"></span></div>
         <div class="rl"><div>${term("val_cheap","估值")}<b class="n">${f1(v)}<small> /${wv}</small></b></div><div>${term("fund","基本面")}<b class="n">${s.fund==null?"—":f1(f)}<small> /${wf}</small></b></div><div class="hot">${term("market","大盤")}<b class="n">${f1(mktPts)}<small> /${wm}</small></b></div></div></div>
-      <div class="blk"><span class="lbl">Valuation · ${mName(s)}在比較區間的位置</span>${peHTML(s)}</div>
-      ${gap>0?`<div class="blk need"><span class="lbl">Trigger · 怎樣才會打折</span>
+      <div class="blk"><span class="lbl">${li("val")}Valuation ·${mName(s)}在比較區間的位置</span>${peHTML(s)}</div>
+      ${gap>0?`<div class="blk need"><span class="lbl">${li("trig")}Trigger ·怎樣才會打折</span>
         <div class="q"><span class="rhl">還差 <em>${gap}</em> 分，任一件發生就到</span></div>
         ${needM<=100?slider("大盤恐慌度",m.score,needM,""):no("大盤恐慌度","單靠大盤補不滿")}
         ${needP>=0?slider(mName(s)+"位階",s.metric_pctl,needP,"%"):no(mName(s)+"位階","單靠估值補不滿")}
         <div class="pewhy" style="border:0;padding:0">假設其他條件不變。</div></div>`:""}
-      ${isGood(s)?`<div class="blk"><span class="lbl">Good · ${term("goodline","好公司打折線")}</span>
+      ${isGood(s)?`<div class="blk"><span class="lbl">${li("good")}Good ·${term("goodline","好公司打折線")}</span>
         <div class="dline">指紋 <b>${q.score}</b>、位階 <b>${s.metric_pctl}%</b> ≤ 60%——對好公司來說已經算打折，可以考慮分批。</div></div>`:""}
-      <div class="blk"><span class="lbl">Thesis · 論點</span>${thesisHTML2(s)}${actsHTML(s)}</div>
+      <div class="blk"><span class="lbl">${li("thesis")}Thesis · 論點</span>${thesisHTML2(s)}${actsHTML(s)}</div>
     </div></div>`;
 }
 function headHTML(s, rank){
