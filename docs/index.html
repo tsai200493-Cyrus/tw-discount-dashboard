@@ -178,6 +178,16 @@
   .sec-h h2{margin:0;font:900 clamp(28px,4vw,44px)/1.15 var(--sans);letter-spacing:.06em}
   .sec-h p{flex-basis:100%;margin:6px 0 0;color:var(--ink2);font-size:14px;max-width:40em}
 
+  /* 題材標籤篩選列：點一下只留該題材的卡片（來源＝watchlist.txt 的 @tags=） */
+  .tagbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 50px}
+  .tagbar .tg-t{font:600 11px var(--disp);letter-spacing:.2em;text-transform:uppercase;color:var(--ink3);margin-right:4px}
+  .tagbar .tg{font:500 13px var(--sans);letter-spacing:.04em;color:var(--ink2);background:transparent;
+    border:1px solid var(--hair2);border-radius:999px;padding:6px 14px;cursor:pointer;transition:background .2s,border-color .2s,color .2s}
+  .tagbar .tg:hover{border-color:var(--ink3);color:var(--ink)}
+  .tagbar .tg.on{background:var(--tone);border-color:var(--tone);color:#fff}
+  .tagbar .tg .cnt{font-family:var(--disp);opacity:.6;margin-left:5px;font-size:11px}
+  .tagbar .tg.on .cnt{opacity:.8}
+
   .stock{padding:34px 0 40px;border-top:1px solid var(--hair2)}
   .sec>.stock:first-of-type{border-top:0;padding-top:0}
   .s-head{display:flex;align-items:baseline;gap:8px 14px;flex-wrap:wrap;margin-bottom:22px}
@@ -1546,6 +1556,43 @@ const HLIO=("IntersectionObserver" in window) ? new IntersectionObserver(es=>es.
   if(e.isIntersecting){ e.target.classList.add("in"); HLIO.unobserve(e.target); } }), {rootMargin:"0px 0px -25% 0px"}) : null;
 function watchHl(scope){ scope.querySelectorAll(".rhl:not(.in)").forEach(el=> HLIO ? HLIO.observe(el) : el.classList.add("in")); }
 
+// ── 題材標籤篩選（來源＝watchlist.txt 的 @tags=，一檔可多個）──
+let FILTER=null;
+function allTags(V){ const m=new Map(); V.forEach(x=>(x.v.tags||[]).forEach(t=>m.set(t,(m.get(t)||0)+1))); return [...m.entries()]; }
+function tagBarHTML(V){
+  const tags=allTags(V); if(tags.length<2) return "";          // 只有 0~1 種標籤就不顯示篩選列
+  const b=(t,l,n)=>`<button class="tg${((t||null)===FILTER)?" on":""}" data-tag="${t||""}">${l}<span class="cnt">${n}</span></button>`;
+  return `<div class="tagbar"><span class="tg-t">題材</span>${b(null,"全部",V.length)}${tags.map(([t,n])=>b(t,t,n)).join("")}</div>`;
+}
+function applyFilter(V){ return FILTER ? V.filter(x=>(x.v.tags||[]).includes(FILTER)) : V; }
+function sectionsHTML(Vf){
+  const scored=Vf.filter(x=>x.v.composite!=null).sort((a,b)=>b.v.composite-a.v.composite);
+  const dreams=Vf.filter(x=>x.v.composite==null);
+  const openL=scored.filter(x=>x.v.composite>=65), half=scored.filter(x=>x.v.composite>=45&&x.v.composite<65), shut=scored.filter(x=>x.v.composite<45);
+  const d=window.DATA; let rank=0;
+  const blocks=list=>list.map(x=>{ rank++; return `<article class="stock ${rank%2===0?"flip":""}" id="s-${x.v.code}" data-code="${x.v.code}">${headHTML(x.v,rank)}${detailHTML(x.v, prevOf(d,x.raw))}</article>`; }).join("");
+  let html="";
+  if(openL.length) html+=`<section class="sec"><div class="sec-h"><span class="lbl">Discount · 打折中 ${openL.length} 檔</span><h2>進到打折區了</h2>
+      <p>65 分以上。溫度計不是買賣訊號——先重讀自己寫的論點，論點還在才考慮分批。</p></div>${blocks(openL)}</section>`;
+  if(half.length) html+=`<section class="sec"><div class="sec-h"><span class="lbl">Watch · 觀察 ${half.length} 檔</span><h2>${openL.length?"再等一下的":"離打折線最近"}</h2>
+      <p>45 到 64 分：還沒打折，但大盤一回檔、或股價一修正就可能進去。照分數高到低排。</p></div>${blocks(half)}</section>`;
+  if(shut.length) html+=`<section class="sec"><div class="sec-h"><span class="lbl">Pricey · 太貴 ${shut.length} 檔</span><h2>先不用看</h2>
+      <p>低於 45 分。一列一檔，點開看細節。位階那條線越靠右＝越接近比較區間裡最貴的時候。</p></div>${ROWHEAD}<div class="rows">${shut.map(rowHTML).join("")}</div></section>`;
+  if(dreams.length) html+=`<section class="sec"><div class="sec-h"><span class="lbl">Dream · 本夢比 ${dreams.length} 檔</span><h2>不評分</h2>
+      <p>沒有本益比可比（新藥、夢股），或估值資料對不上。只看股價，用賭注的大小對待。</p></div>${ROWHEAD}<div class="rows">${dreams.map(rowHTML).join("")}</div></section>`;
+  if(!html) html=`<section class="sec"><p class="label" style="padding:24px 0 0;border-top:1px solid var(--hair2)">這個題材目前清單裡沒有符合的股票。</p></section>`;
+  return html;
+}
+// 點標籤：只重畫卡片區（#seclist），首屏溫度計與側欄維持整體大盤視角、不受篩選影響
+document.addEventListener("click", e=>{
+  const b=e.target.closest(".tagbar .tg"); if(!b) return;
+  const t=b.dataset.tag||null; if(t===FILTER) return;
+  FILTER=t;
+  const V=((window.DATA&&window.DATA.stocks)||[]).map(x=>({raw:x, v:view(x)}));
+  const sl=$id("seclist"); if(sl){ sl.innerHTML=sectionsHTML(applyFilter(V)); watchHl(sl); }
+  document.querySelectorAll(".tagbar .tg").forEach(x=>x.classList.toggle("on",(x.dataset.tag||null)===FILTER));
+});
+
 // ── 整頁 ──
 function render(d){
   window.DATA=d;
@@ -1574,16 +1621,7 @@ function render(d){
   $id("herotext").innerHTML=heroHTML(d);
   const th=thermoSVG(scored), svg=$id("thermo"); svg.setAttribute("viewBox", th.vb); svg.innerHTML=th.g;
 
-  let rank=0, html="";
-  const blocks=list=>list.map(x=>{ rank++; return `<article class="stock ${rank%2===0?"flip":""}" id="s-${x.v.code}" data-code="${x.v.code}">${headHTML(x.v,rank)}${detailHTML(x.v, prevOf(d,x.raw))}</article>`; }).join("");
-  if(openL.length) html+=`<section class="sec"><div class="sec-h"><span class="lbl">Discount · 打折中 ${openL.length} 檔</span><h2>進到打折區了</h2>
-      <p>65 分以上。溫度計不是買賣訊號——先重讀自己寫的論點，論點還在才考慮分批。</p></div>${blocks(openL)}</section>`;
-  if(half.length) html+=`<section class="sec"><div class="sec-h"><span class="lbl">Watch · 觀察 ${half.length} 檔</span><h2>${openL.length?"再等一下的":"離打折線最近"}</h2>
-      <p>45 到 64 分：還沒打折，但大盤一回檔、或股價一修正就可能進去。照分數高到低排。</p></div>${blocks(half)}</section>`;
-  if(shut.length) html+=`<section class="sec"><div class="sec-h"><span class="lbl">Pricey · 太貴 ${shut.length} 檔</span><h2>先不用看</h2>
-      <p>低於 45 分。一列一檔，點開看細節。位階那條線越靠右＝越接近比較區間裡最貴的時候。</p></div>${ROWHEAD}<div class="rows">${shut.map(rowHTML).join("")}</div></section>`;
-  if(dreams.length) html+=`<section class="sec"><div class="sec-h"><span class="lbl">Dream · 本夢比 ${dreams.length} 檔</span><h2>不評分</h2>
-      <p>沒有本益比可比（新藥、夢股），或估值資料對不上。只看股價，用賭注的大小對待。</p></div>${ROWHEAD}<div class="rows">${dreams.map(rowHTML).join("")}</div></section>`;
+  let html = tagBarHTML(V) + `<div id="seclist">` + sectionsHTML(applyFilter(V)) + `</div>`;
   const wv=Math.round(W.value*100), wf=Math.round(W.fund*100), wm=Math.round(W.market*100);
   html+=`<section class="sec" id="how"><div class="sec-h"><span class="lbl">How · 分數怎麼算</span><h2>三個零件，加起來 100</h2>
       <p>權重透明、沒有回測調參。65 分以上叫打折，45 到 64 觀察，45 以下太貴。這是情境傾向，不是買賣訊號。</p></div>

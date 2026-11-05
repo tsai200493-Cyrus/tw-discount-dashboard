@@ -36,6 +36,7 @@ PER_DEFAULT_DAYS = 1825    # 本益比位階的預設比較區間（近 5 年）
 PER_MIN_SAMPLES = 200      # 自訂區間的樣本下限（一年約 245 個交易日），不足就退回預設
 PER_MIN_COVERAGE = 0.85    # 區間內「有本益比」的交易日比例；低於此改用股價淨值比
 SINCE_RE = re.compile(r"@since=(\d{4})-(\d{2})(?:-(\d{2}))?")
+TAGS_RE = re.compile(r"@tags=([^\s@]+)")   # @tags=電網,散熱（逗號分隔、可複選；供網站題材篩選）
 
 
 def _get(dataset, data_id, start_date):
@@ -181,6 +182,11 @@ def load_watchlist():
         code = code.strip()
         if not code:
             continue
+        tags = []
+        mt = TAGS_RE.search(comment)
+        if mt:
+            tags = [t.strip() for t in mt.group(1).split(",") if t.strip()]
+            comment = comment[:mt.start()] + comment[mt.end():]   # 先摘掉，名稱／理由才不會吃到
         since = why = None
         m = SINCE_RE.search(comment)
         if m:
@@ -197,7 +203,7 @@ def load_watchlist():
                 since = None
         else:
             name = comment.strip()
-        out.append({"code": code, "name": name, "since": since, "why": why})
+        out.append({"code": code, "name": name, "since": since, "why": why, "tags": tags})
     return out
 
 
@@ -683,6 +689,7 @@ def main():
         t = thesis.get(code) or {}
         st_["thesis"] = t.get("thesis", "")
         st_["brk"] = t.get("brk", "")
+        st_["tags"] = item.get("tags", [])
         stocks.append(st_)
     data = {
         "generated_at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
