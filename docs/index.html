@@ -80,8 +80,14 @@
   .top{display:flex;align-items:center;gap:12px;height:56px;padding:0 20px;max-width:1240px;margin:0 auto}
   .brand{display:flex;align-items:center;gap:9px;margin:0;font:700 15px var(--sans);letter-spacing:.14em;white-space:nowrap}
   .brand svg{width:18px;height:18px}
-  .top .date{font:500 11px var(--disp);letter-spacing:.2em;opacity:.75}
-  @media (max-width:420px){ .brand{letter-spacing:.06em} .top .date{display:none} }
+  .bwrap{display:flex;align-items:center;gap:12px;min-width:0}
+  .top .date{font:500 11px var(--disp);letter-spacing:.2em;opacity:.75;white-space:nowrap}
+  .top .date .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#ff6b5b;margin-right:6px;vertical-align:1px;animation:livep 2s ease-in-out infinite}
+  @keyframes livep{50%{opacity:.25}}
+  @media (prefers-reduced-motion:reduce){ .top .date .dot{animation:none} }
+  /* 手機：時間改放品牌名下面（橫排塞不下），不再隱藏——每天用手機看的人最需要知道資料多新 */
+  @media (max-width:420px){ .brand{letter-spacing:.06em} .bwrap{flex-direction:column;align-items:flex-start;gap:2px}
+    .top .date{font-size:10px;letter-spacing:.12em;padding-left:27px} }
   .sp{flex:1}
   .ib{width:34px;height:34px;border-radius:50%;border:1px solid rgba(255,255,255,.4);background:transparent;color:#fff;display:grid;place-items:center;cursor:pointer;padding:0}
   .ib:hover{background:rgba(255,255,255,.14)}
@@ -411,8 +417,8 @@
 <header class="hero" id="hero">
   <div class="drift"><i></i><i></i><i></i></div><div class="grain"></div>
   <div class="top">
-    <h1 class="brand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M10 14.5V4a2 2 0 1 1 4 0v10.5a4 4 0 1 1-4 0z"/><path d="M12 9v7"/></svg>打折窗口溫度計</h1>
-    <span class="date" id="hdate"></span><span class="sp"></span>
+    <div class="bwrap"><h1 class="brand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M10 14.5V4a2 2 0 1 1 4 0v10.5a4 4 0 1 1-4 0z"/><path d="M12 9v7"/></svg>打折窗口溫度計</h1>
+    <span class="date" id="hdate"></span></div><span class="sp"></span>
     <button class="ib" data-go="addcard" title="新增追蹤" aria-label="新增追蹤"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
     <button class="ib" data-go="btcard" title="查任何一檔的歷史" aria-label="查任何一檔的歷史"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3.6 12a8.4 8.4 0 1 0 2.5-6L3.7 8.4"/><path d="M3.4 4v4.6h4.6M12 8v4.3l3 1.8"/></svg></button>
     <button class="ib" id="helpbtn" title="怎麼看這張表" aria-label="怎麼看這張表"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.4 9.4a2.7 2.7 0 1 1 3.2 3.7c-.5.2-.8.7-.8 1.3v.5M11.8 17.6v.1"/></svg></button>
@@ -518,6 +524,9 @@ const GLOSSARY = {
 const term=(k,t)=>`<span class="term" data-k="${k}">${t}</span>`;
 const chartLink=(code)=>`<span class="chartlink" data-code="${code}">營收動能</span>`;
 const rmLink=(code)=>`<span class="rmlink" data-code="${code}">移除</span>`;
+// 進場時機分數的顏色＝這檔自己的區間（說明框的 ● 同一組）。2026-11-05 起卡片大數字、底部捲動列也用這個。
+// ⚠️ 不要改回 var(--tone)：--tone 是「大盤情緒」（恐慌藍／中性綠／貪婪紅），講的是大盤不是這檔，
+//    大盤中性時每一檔都會變綠、跟說明框對不上。一種顏色只講一件事：大盤那一層（背景、色帶、score 長條的「大盤」段）才用 --tone。
 function compColor(s){ return s>=65?"var(--open)": s>=45?"var(--half)": "var(--shut)"; }
 function mktColor(s){ return s>=65?"var(--open)" : s>=40?"var(--half)" : "var(--shut)"; }
 function esc(x){ return x==null?"—":x; }
@@ -1445,7 +1454,7 @@ function detailHTML(s, prevScore){
   const no=(k,why)=>`<div class="sl no"><span>${k}</span><span>${why}</span></div>`;
   return `<div class="cgrid">
     <div>
-      <div class="price"><div class="score n" style="color:${t==="shut"?"var(--ink)":"var(--tone)"}">${s.composite}${deltaHTML(s.composite,prevScore)}</div>
+      <div class="price"><div class="score n" style="color:${compColor(s.composite)}">${s.composite}${deltaHTML(s.composite,prevScore)}</div>
         <div class="meta"><div class="t">${TIERW[t]}${gap>0?`・差 ${gap} 分`:"・已在打折區"}</div><div class="s n">${priceLine}</div></div></div>
       ${sparkSVG(s.spark)}
       <div class="facts"><div>${mTerm(s)}<b>${esc(s.metric_val)}</b>${term("pctl","位階")} ${esc(s.metric_pctl)}%</div>
@@ -1526,7 +1535,7 @@ function track(){
   RAIL.querySelectorAll(".dot").forEach(d=>{ d.classList.toggle("now", d.dataset.code===now);
     d.classList.toggle("seen", seen.has(d.dataset.code) && d.dataset.code!==now); });
   const rc=$id("rcur"); if(!rc) return;
-  rc.innerHTML=`${x.v.name||x.v.code}<b>${x.v.composite==null?"—":x.v.composite}</b>`;
+  rc.innerHTML=`${x.v.name||x.v.code}<b${x.v.composite==null?"":` style="color:${compColor(x.v.composite)}"`}>${x.v.composite==null?"—":x.v.composite}</b>`;
   if(wide()) rc.style.top=(x.v.composite==null?100:100-x.v.composite)+"%";
 }
 addEventListener("scroll", ()=>requestAnimationFrame(track), {passive:true});
@@ -1541,10 +1550,17 @@ function watchHl(scope){ scope.querySelectorAll(".rhl:not(.in)").forEach(el=> HL
 function render(d){
   window.DATA=d;
   const m=d.market||{}, W=d.weights||{value:.4,fund:.25,market:.35};
-  const gen=(d.generated_at||"").replace("T"," ").replace("+00:00"," UTC");
+  // 產出時間換成台灣時間（generated_at 是 UTC）；排程可能晚好幾小時，所以要顯示「實際算好的時間」
+  let gen="—";
+  if(d.generated_at){ const t=new Date(d.generated_at);
+    if(!isNaN(t)){ const p=new Date(t.getTime()+8*3600e3).toISOString();
+      gen=p.slice(5,10).replace("-","/")+" "+p.slice(11,16); } }
   const live=d.intraday&&d.intraday.time;     // 盤中暫估：18:00 正式版會蓋掉
-  $id("sub").textContent="資料日 "+(m.date||"—")+(live?"　·　盤中暫估 "+live+"（18:00 收盤後以正式資料更新）":"　·　產出 "+gen);
-  $id("hdate").textContent=(m.date||"").slice(5).replace("-",".")+(live?" LIVE "+live:" CLOSE");
+  const md=(m.date||"").slice(5).replace("-",".");
+  $id("sub").textContent="資料日 "+(m.date||"—")+(live
+    ? "　·　盤中暫估（報價 "+live+"，"+gen+" 算好；18:00 收盤後以正式資料更新）"
+    : "　·　收盤正式資料（"+gen+" 算好）");
+  $id("hdate").innerHTML=live ? `<span class="dot"></span>${md} 盤中 ${live}` : `${md} 收盤 · ${gen.slice(0,5)===md.replace(".","/")?gen.slice(-5):gen} 更新`;  // 隔天才跑完就連日期一起寫
   ROOT.style.setProperty("--tone", `var(--t-${moodOf(m.score)})`);
 
   const V=(d.stocks||[]).map(x=>({raw:x, v:view(x)}));
