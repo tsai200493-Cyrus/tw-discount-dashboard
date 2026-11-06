@@ -417,6 +417,10 @@
   .nclink{cursor:pointer}
   .ncbtn{margin-top:18px;width:100%;font:600 14px var(--sans);letter-spacing:.04em;color:#fff;background:var(--tone);border:0;border-radius:999px;padding:12px 16px;cursor:pointer}
   .ncbtn:hover{filter:brightness(1.08)}
+  .mbanner{margin:0 0 26px;padding:13px 16px;border-radius:12px;background:color-mix(in srgb,var(--tone) 13%,var(--bg0));
+    border:1px solid color-mix(in srgb,var(--tone) 32%,transparent);font-size:13px;line-height:1.75;color:var(--ink)}
+  .mbanner b{font-family:var(--disp)}
+  .mbanner .mbx{display:inline-block;margin-top:6px;color:var(--tone);font-weight:600;cursor:pointer;text-decoration:underline}
   #tip .k{font:900 18px var(--sans);letter-spacing:.06em;color:var(--ink);margin-bottom:6px}
   #tip .x{float:right;color:var(--ink3);font-size:12px}
   .chead{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}
@@ -724,7 +728,7 @@ async function openNowcast(){
     const v=parseFloat(inp.value); if(!v||v<=0) return;
     NC.manual={date:new Date().toISOString().slice(0,10), close:v};   // 把「今天」釘住
     MK.series=null; MK.view="both"; MK.focus=null;                    // 清掉舊序列→用「含今天」重建→預設疊圖
-    panel.classList.remove("show"); mkOpen();
+    panel.classList.remove("show"); applyManual();
   });
   setTimeout(()=>{ try{ inp.focus({preventScroll:true}); inp.select(); }catch(_){} },300);
 }
@@ -736,6 +740,7 @@ function ncCompute(v){
   const s=last.score,
         fb=Math.round(bclamp(50-last.bias*3.3)), fd=Math.round(bclamp(-last.dd*2.5)), fv=Math.round(bclamp((last.vol-12)/26*100)),
         chg=(v/NC.lastClose-1)*100, col=ncColor(s);
+  NC.score=s; NC.idx=v;                 // 給「固定此值」用，套進整頁
   out.innerHTML=
     `<div class="nc-score n" style="color:${col}">${s}</div>`+
     `<div class="nc-tag" style="color:${col}">${ncTag(s)}</div>`+
@@ -747,6 +752,28 @@ function ncCompute(v){
     `</div>`+
     `<div class="nc-form">恐慌度 ＝ 0.4×${fb} ＋ 0.3×${fd} ＋ 0.3×${fv} ＝ <b>${s}</b><br>歷史收盤取自 FinMind，今天的點數是你手動輸入的即時值；跟首屏那顆的差別只在「用現在 vs 用昨收」。</div>`;
 }
+// ── 手動 what-if：把手動恐慌度套進整頁（大盤那塊共用且線性，重算只差一個位移量 delta）──
+function manualData(base, score, idx){
+  const W=base.weights||{value:.4,fund:.25,market:.35};
+  const off=(base.market&&base.market.score!=null)?base.market.score:50;
+  const delta=W.market*(score-off);
+  const bump=s=>{ const o=Object.assign({},s);
+    if(o.composite!=null) o.composite=Math.round(o.composite+delta);
+    if(o.alt&&o.alt.composite!=null){ o.alt=Object.assign({},o.alt); o.alt.composite=Math.round(o.alt.composite+delta); }
+    return o; };
+  const d=Object.assign({},base);
+  d.market=Object.assign({},base.market,{score:score, tag:ncTag(score), close:idx, manual:true});
+  d.stocks=(base.stocks||[]).map(bump);
+  d.prev=null;                 // what-if 不跟昨天比，▲▼ 會沒意義
+  d._manual={idx:idx};
+  return d;
+}
+function applyManual(){ if(ORIG_DATA && NC.score!=null) render(manualData(ORIG_DATA, NC.score, NC.idx)); }
+function clearManual(){ NC.manual=null; NC.score=null; if(ORIG_DATA) render(ORIG_DATA); }
+function manualBanner(d){ const m=d.market||{};
+  return `<div class="mbanner"><b>手動估算</b>：大盤恐慌度用你輸入的 <b>${m.score}</b>（指數 ${Math.round(m.close)}）重算了首屏那顆、大盤分、每檔綜合分與溫度計。<br>⚠「估值／股價」仍是最近收盤、不是即時；尾盤收盤後正式資料會蓋回。<span class="mbx">回到官方收盤 ✕</span></div>`;
+}
+document.addEventListener("click", e=>{ if(e.target.closest(".mbx")){ e.preventDefault(); clearManual(); } });
 // 浮標定位：x 是 viewBox 座標（svg width:100% ⇒ x/W 就是容器百分比）。
 // 靠邊時改成貼齊該側，避免浮標被切掉。
 function placeTip(el, x, W){
@@ -1277,7 +1304,8 @@ document.getElementById("helpbtn").addEventListener("click",e=>{
   g.open=true; g.scrollIntoView({behavior:"smooth",block:"start"});
 });
 
-fetch("./data.json?_="+Date.now()).then(r=>r.json()).then(render).catch(()=>{
+let ORIG_DATA=null;   // 原始官方資料；手動 what-if 每次都從這份重算，隨時可還原
+fetch("./data.json?_="+Date.now()).then(r=>r.json()).then(d=>{ORIG_DATA=d; render(d);}).catch(()=>{
   document.getElementById("sub").innerHTML =
     '<span class="err">讀取 data.json 失敗</span>（本機請用 http 開啟，或等 GitHub Pages 上線）';
 });
@@ -1728,7 +1756,7 @@ function render(d){
   $id("herotext").innerHTML=heroHTML(d);
   const th=thermoSVG(scored), svg=$id("thermo"); svg.setAttribute("viewBox", th.vb); svg.innerHTML=th.g;
 
-  let html = tagBarHTML(V) + `<div id="seclist">` + sectionsHTML(applyFilter(V)) + `</div>`;
+  let html = (d._manual?manualBanner(d):"") + tagBarHTML(V) + `<div id="seclist">` + sectionsHTML(applyFilter(V)) + `</div>`;
   const wv=Math.round(W.value*100), wf=Math.round(W.fund*100), wm=Math.round(W.market*100);
   html+=`<section class="sec" id="how"><div class="sec-h"><span class="lbl">How · 分數怎麼算</span><h2>三個零件，加起來 100</h2>
       <p>權重透明、沒有回測調參。65 分以上叫打折，45 到 64 觀察，45 以下太貴。這是情境傾向，不是買賣訊號。</p></div>
