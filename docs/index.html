@@ -415,6 +415,20 @@
   .nc-grid b{display:block;font:600 20px var(--disp);color:var(--ink);margin-bottom:2px}
   .nc-form{font-size:12.5px;color:var(--ink3);margin-top:16px;line-height:1.75;border-left:2px solid var(--hair2);padding-left:10px}
   .nclink{cursor:pointer}
+  /* 首屏試算入口：做成一塊可按的卡片（首屏全白字，靠實心白圓圈當視覺焦點；不加自動動畫，hover 才動） */
+  .ncta{display:flex;align-items:center;gap:12px;width:100%;max-width:440px;margin-top:16px;padding:10px 14px 10px 10px;text-align:left;color:#fff;font-family:var(--sans);
+    background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.5);border-radius:14px;transition:background .2s}
+  .ncta:hover{background:rgba(255,255,255,.22)}
+  .ncta:focus-visible{outline:2px solid #fff;outline-offset:2px}
+  .ncta .nc-ico{flex:none;display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:#fff;color:var(--tone)}
+  .ncta svg{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .ncta .nc-ico svg{width:22px;height:22px}
+  .ncta .nc-txt{flex:1;min-width:0;line-height:1.35}
+  .ncta .nc-txt small{display:block;font-size:12px;opacity:.82}
+  .ncta .nc-txt b{display:block;font-size:15px;font-weight:700;letter-spacing:.04em}
+  .ncta .nc-arr{flex:none;width:20px;height:20px;transition:transform .2s var(--ease)}
+  .ncta:hover .nc-arr{transform:translateX(3px)}
+  @media (prefers-reduced-motion:reduce){ .ncta,.ncta .nc-arr{transition:none} }
   .ncbtn{margin-top:18px;width:100%;font:600 14px var(--sans);letter-spacing:.04em;color:#fff;background:var(--tone);border:0;border-radius:999px;padding:12px 16px;cursor:pointer}
   .ncbtn:hover{filter:brightness(1.08)}
   .mbanner{margin:0 0 26px;padding:13px 16px;border-radius:12px;background:color-mix(in srgb,var(--tone) 13%,var(--bg0));
@@ -429,6 +443,8 @@
   .pw-out{margin-top:8px;min-height:1px}
   .pw-r{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 14px;font-size:12.5px;color:var(--ink3)}
   .pw-r b{font:600 26px var(--disp);margin-right:2px;letter-spacing:-.01em}
+  .pw-go{font:600 12px var(--sans);letter-spacing:.04em;color:#fff;background:var(--tone);border:0;border-radius:999px;padding:6px 12px;cursor:pointer;white-space:nowrap}
+  .pw-go:hover{filter:brightness(1.08)}
   #tip .k{font:900 18px var(--sans);letter-spacing:.06em;color:var(--ink);margin-bottom:6px}
   #tip .x{float:right;color:var(--ink3);font-size:12px}
   .chead{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}
@@ -734,9 +750,9 @@ async function openNowcast(){
   const pin=$id("ncpin");
   if(pin) pin.addEventListener("click",()=>{
     const v=parseFloat(inp.value); if(!v||v<=0) return;
-    NC.manual={date:new Date().toISOString().slice(0,10), close:v};   // 把「今天」釘住
+    NC.manual={date:new Date().toISOString().slice(0,10), close:v, score:NC.score};   // 釘住今天（score＝剛算出的恐慌度）
     MK.series=null; MK.view="both"; MK.focus=null;                    // 清掉舊序列→用「含今天」重建→預設疊圖
-    panel.classList.remove("show"); applyManual();
+    panel.classList.remove("show"); applyOverrides();
   });
   setTimeout(()=>{ try{ inp.focus({preventScroll:true}); inp.select(); }catch(_){} },300);
 }
@@ -760,37 +776,54 @@ function ncCompute(v){
     `</div>`+
     `<div class="nc-form">恐慌度 ＝ 0.4×${fb} ＋ 0.3×${fd} ＋ 0.3×${fv} ＝ <b>${s}</b><br>歷史收盤取自 FinMind，今天的點數是你手動輸入的即時值；跟首屏那顆的差別只在「用現在 vs 用昨收」。</div>`;
 }
-// ── 手動 what-if：把手動恐慌度套進整頁（大盤那塊共用且線性，重算只差一個位移量 delta）──
-function manualData(base, score, idx){
+// ── 手動 what-if：手動大盤恐慌度 ＋ 個股現價，套進整頁一起重算（可疊加）──
+// 大盤那塊共用且線性（位移量 delta）；有填現價的個股則整檔重算位階/估值/綜合分。
+function overrideActive(){ return !!NC.manual || Object.keys(WF.price).length>0; }
+function overrideData(base){
   const W=base.weights||{value:.4,fund:.25,market:.35};
-  const off=(base.market&&base.market.score!=null)?base.market.score:50;
-  const delta=W.market*(score-off);
-  const bump=s=>{ const o=Object.assign({},s);
-    if(o.composite!=null) o.composite=Math.round(o.composite+delta);
-    if(o.alt&&o.alt.composite!=null){ o.alt=Object.assign({},o.alt); o.alt.composite=Math.round(o.alt.composite+delta); }
-    return o; };
+  const offMkt=(base.market&&base.market.score!=null)?base.market.score:50;
+  const mkt= NC.manual? NC.manual.score : offMkt;
+  const mktDelta=W.market*(mkt-offMkt);
   const d=Object.assign({},base);
-  d.market=Object.assign({},base.market,{score:score, tag:ncTag(score), close:idx, manual:true});
-  d.stocks=(base.stocks||[]).map(bump);
+  if(NC.manual) d.market=Object.assign({},base.market,{score:mkt,tag:ncTag(mkt),close:NC.manual.close,manual:true});
+  d.stocks=(base.stocks||[]).map(s=>{
+    const o=Object.assign({},s), pov=WF.price[s.code], wf=(pov!=null)?WF.cache[s.code+"|"+MODE]:null;
+    if(pov!=null && wf && typeof wf==="object"){           // 有填現價且歷史分布已載入 → 整檔重算
+      const newVal=wf.lastPER*(pov/wf.lastClose);
+      let below=0; for(const v of wf.vals) if(v<=newVal) below++;
+      const pctl=Math.round(below/wf.vals.length*100), vc=100-pctl, fund=(o.fund==null?45:o.fund);
+      const tgt=(MODE==="cust"&&o.alt)?(o.alt=Object.assign({},o.alt)):o;   // 寫進目前這套（標準/客製）
+      tgt.metric_val=Math.round(newVal*100)/100; tgt.metric_pctl=pctl; tgt.val_cheap=vc;
+      tgt.composite=Math.round(W.value*vc+W.fund*fund+W.market*mkt);
+      o.price=pov; o._pxman=true;
+    }else{
+      if(o.composite!=null) o.composite=Math.round(o.composite+mktDelta);
+      if(o.alt&&o.alt.composite!=null){ o.alt=Object.assign({},o.alt); o.alt.composite=Math.round(o.alt.composite+mktDelta); }
+    }
+    return o;
+  });
   d.prev=null;                 // what-if 不跟昨天比，▲▼ 會沒意義
-  d._manual={idx:idx};
+  d._manual={mkt:!!NC.manual, npx:Object.keys(WF.price).length};
   return d;
 }
-function applyManual(){ if(ORIG_DATA && NC.score!=null) render(manualData(ORIG_DATA, NC.score, NC.idx)); }
-function clearManual(){ NC.manual=null; NC.score=null; if(ORIG_DATA) render(ORIG_DATA); }
-function manualBanner(d){ const m=d.market||{};
-  return `<div class="mbanner"><b>手動估算</b>：大盤恐慌度用你輸入的 <b>${m.score}</b>（指數 ${Math.round(m.close)}）重算了首屏那顆、大盤分、每檔綜合分與溫度計。<br>⚠「估值／股價」仍是最近收盤、不是即時；尾盤收盤後正式資料會蓋回。<span class="mbx">回到官方收盤 ✕</span></div>`;
+function applyOverrides(){ if(ORIG_DATA) render(overrideActive()?overrideData(ORIG_DATA):ORIG_DATA); }
+function clearOverrides(){ NC.manual=null; NC.score=null; WF.price={}; if(ORIG_DATA) render(ORIG_DATA); }
+function manualBanner(d){ const m=d.market||{}, x=d._manual||{}, bits=[];
+  if(x.mkt) bits.push(`大盤恐慌度＝你輸入的 <b>${m.score}</b>（指數 ${Math.round(m.close)}）`);
+  if(x.npx) bits.push(`<b>${x.npx}</b> 檔用你輸入的現價重算`);
+  return `<div class="mbanner"><b>手動估算</b>：${bits.join("；")||"—"}——首屏、大盤分、綜合分、位階、溫度計都跟著重排。<br>⚠ 沒覆寫的「基本面／其他股價」仍是最近收盤；尾盤收盤後正式資料會蓋回。<span class="mbx">回到官方 ✕</span></div>`;
 }
-document.addEventListener("click", e=>{ if(e.target.closest(".mbx")){ e.preventDefault(); clearManual(); } });
+document.addEventListener("click", e=>{ if(e.target.closest(".mbx")){ e.preventDefault(); clearOverrides(); } });
 
 // ── 個股現價試算：輸入某檔現價 → 抓它的歷史本益比分布，即時重算位階/估值/綜合分（一次一檔）──
 // 比較區間、配股校正都跟卡片／時光倒流一致（metric_since、per_fix），結果才對得上。
-const WF={cache:{}};
+const WF={cache:{}, price:{}};
 async function cardWhatifData(code){
   const ck=code+"|"+MODE;
   if(ck in WF.cache) return WF.cache[ck];
   const promise=(async()=>{
-    const meta=view((window.DATA&&window.DATA.stocks||[]).find(x=>x.code===code));
+    const raw=((ORIG_DATA&&ORIG_DATA.stocks)||(window.DATA&&window.DATA.stocks)||[]).find(x=>x.code===code);
+    const meta=raw?view(raw):null;                         // 基準一律取原始官方值，不被已套用的覆寫汙染
     if(!meta||meta.metric==null||meta.metric_val==null||meta.price==null) return null;
     const mKey=meta.metric==="pbr"?"PBR":"PER", perSince=meta.metric_since||null;
     const today=new Date().toISOString().slice(0,10);
@@ -818,9 +851,10 @@ document.addEventListener("input", async e=>{
   const wf=await cardWhatifData(code);
   if(+out.dataset.px!==price) return;                       // 使用者又改了 → 丟棄過期結果
   if(!wf){ out.innerHTML='<span class="label">這檔算不出位階（本夢比或資料不足）。</span>'; return; }
-  const meta=view((window.DATA&&window.DATA.stocks||[]).find(x=>x.code===code));
-  const W=(window.DATA.weights)||{value:.4,fund:.25,market:.35};
-  const mScore=(window.DATA.market&&window.DATA.market.score!=null)?window.DATA.market.score:50;
+  const raw=((ORIG_DATA&&ORIG_DATA.stocks)||[]).find(x=>x.code===code), meta=raw?view(raw):null;
+  if(!meta){ out.innerHTML=""; return; }
+  const W=((window.DATA&&window.DATA.weights))||{value:.4,fund:.25,market:.35};
+  const mScore=(window.DATA&&window.DATA.market&&window.DATA.market.score!=null)?window.DATA.market.score:50;
   const newVal=wf.lastPER*(price/wf.lastClose);
   let below=0; for(const v of wf.vals) if(v<=newVal) below++;
   const pctl=Math.round(below/wf.vals.length*100), valCheap=100-pctl;
@@ -828,7 +862,18 @@ document.addEventListener("input", async e=>{
   const comp=Math.round(W.value*valCheap+W.fund*fund+W.market*mScore);
   const chg=(price/wf.lastClose-1)*100, mName=wf.mKey==="PBR"?"股價淨值比":"本益比";
   out.innerHTML=`<div class="pw-r"><b style="color:${compColor(comp)}">${comp}</b>綜合　<span>${mName} ${newVal.toFixed(wf.mKey==="PBR"?2:1)}</span>　<span>位階 ${pctl}%</span>　<span class="${chg>0?'up':chg<0?'down':'flat'}">${chg>0?'+':''}${chg.toFixed(1)}%</span></div>`+
-    `<div class="label" style="margin-top:4px">官方 綜合 ${meta.composite}／位階 ${meta.metric_pctl}%（昨收 ${meta.price}）。只有「估值」即時，基本面／大盤不變；重整還原。</div>`;
+    `<div class="label" style="margin-top:4px">預覽（官方 綜合 ${meta.composite}／位階 ${meta.metric_pctl}%、昨收 ${meta.price}）。按 <b>套用到整頁</b> 才會換掉整張卡片與溫度計；重整還原。</div>`;
+});
+// 按「套用到整頁」：把這檔現價記下來，整頁用覆寫後的資料重排（可跟大盤手動值疊加）
+document.addEventListener("click", async e=>{
+  const go=e.target.closest(".pw-go"); if(!go) return;
+  const box=go.closest(".pw"); if(!box) return;
+  const code=box.dataset.code, inp=box.querySelector(".pw-in"), out=box.querySelector(".pw-out");
+  const price=parseFloat(inp.value); if(!price||price<=0) return;
+  if(!((code+"|"+MODE) in WF.cache)) out.innerHTML='<span class="label">載入歷史本益比…</span>';
+  const wf=await cardWhatifData(code);
+  if(!wf){ out.innerHTML='<span class="label">這檔算不出位階（本夢比或資料不足）。</span>'; return; }
+  WF.price[code]=price; applyOverrides();
 });
 // 浮標定位：x 是 viewBox 座標（svg width:100% ⇒ x/W 就是容器百分比）。
 // 靠邊時改成貼齊該側，避免浮標被切掉。
@@ -1492,7 +1537,9 @@ function heroHTML(d){
         <div class="ends"><span>GREED 收手</span><span>FEAR 機會</span></div></div></div>
     <div class="stats"><span>大盤 <b>${esc(m.close)}</b></span><span>乖離120 <b>${m.bias>0?"+":""}${esc(m.bias)}%</b></span><span>距年高 <b>${esc(m.dd)}%</b></span><span>20日波動 <b>${esc(m.vol)}%</b></span></div>
     ${m.margin_note?`<div class="stats sm">${m.margin_note.split(" · ").map(x=>`<span>${x}</span>`).join("")}</div>`:""}
-    <div class="stats sm"><span class="nclink" style="color:#fff;border-bottom:1px dashed rgba(255,255,255,.55);padding-bottom:1px">盤中想看即時？手動輸入指數試算 →</span></div>
+    <button type="button" class="nclink ncta"><span class="nc-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l2.5-6 4 12 2.5-6h5"/></svg></span>
+      <span class="nc-txt"><small>盤中想看即時？</small><b>手動輸入指數試算</b></span>
+      <svg class="nc-arr" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
     ${moversHTML(d)}${modeSwitchHTML(d)}`;
 }
 
@@ -1668,7 +1715,7 @@ function detailHTML(s, prevScore){
         <div class="rb"><span style="width:${v}%;background:var(--ink)"></span><span style="width:${f}%;background:var(--ink3)"></span><span style="width:${mktPts}%;background:var(--tone)"></span>
           <span class="cap" style="width:${Math.max(0,100-CEIL)}%"></span><span class="ln"></span></div>
         <div class="rl"><div>${term("val_cheap","估值")}<b class="n">${f1(v)}<small> /${wv}</small></b></div><div>${term("fund","基本面")}<b class="n">${s.fund==null?"—":f1(f)}<small> /${wf}</small></b></div><div class="hot">${term("market","大盤")}<b class="n">${f1(mktPts)}<small> /${wm}</small></b></div></div></div>
-      <div class="blk"><span class="lbl">${li("val")}Valuation ·${mName(s)}在比較區間的位置</span>${peHTML(s)}${s.metric!=null?`<div class="pw" data-code="${s.code}"><div class="pw-h">現價試算 <input class="pw-in" type="number" inputmode="decimal" step="0.01" value="${s.price==null?"":s.price}"><span class="label" style="border:0">← 打進現價即時重算這檔位階</span></div><div class="pw-out"></div></div>`:""}</div>
+      <div class="blk"><span class="lbl">${li("val")}Valuation ·${mName(s)}在比較區間的位置</span>${peHTML(s)}${s.metric!=null?`<div class="pw" data-code="${s.code}"><div class="pw-h">現價試算 <input class="pw-in" type="number" inputmode="decimal" step="0.01" value="${s.price==null?"":s.price}"><button class="pw-go">套用到整頁 →</button></div><div class="pw-out"></div></div>`:""}</div>
       ${gap>0?`<div class="blk need"><span class="lbl">${li("trig")}Trigger ·怎樣才會打折</span>
         <div class="q"><span class="rhl">還差 <em>${gap}</em> 分，任一件發生就到</span></div>
         ${needM<=100?slider("大盤恐慌度",m.score,needM,""):no("大盤恐慌度","單靠大盤補不滿")}
