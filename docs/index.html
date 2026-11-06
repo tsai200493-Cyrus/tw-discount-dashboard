@@ -415,6 +415,8 @@
   .nc-grid b{display:block;font:600 20px var(--disp);color:var(--ink);margin-bottom:2px}
   .nc-form{font-size:12.5px;color:var(--ink3);margin-top:16px;line-height:1.75;border-left:2px solid var(--hair2);padding-left:10px}
   .nclink{cursor:pointer}
+  .ncbtn{margin-top:18px;width:100%;font:600 14px var(--sans);letter-spacing:.04em;color:#fff;background:var(--tone);border:0;border-radius:999px;padding:12px 16px;cursor:pointer}
+  .ncbtn:hover{filter:brightness(1.08)}
   #tip .k{font:900 18px var(--sans);letter-spacing:.06em;color:var(--ink);margin-bottom:6px}
   #tip .x{float:right;color:var(--ink3);font-size:12px}
   .chead{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}
@@ -713,9 +715,17 @@ async function openNowcast(){
   body.innerHTML=
     `<div class="nc-in"><input id="ncval" type="number" inputmode="decimal" step="1" value="${Math.round(NC.lastClose)}"></div>`+
     `<div class="label">從看盤軟體或搜尋「台股加權指數」，把<b>現在的點數</b>打進上面這格（預設帶的是最近收盤 ${Math.round(NC.lastClose)}）。邊打邊算。</div>`+
-    `<div id="ncout"></div>`;
+    `<div id="ncout"></div>`+
+    `<button id="ncpin" class="ncbtn">📌 固定此值，帶進歷史疊圖 →</button>`;
   const inp=$id("ncval"); const run=()=>ncCompute(parseFloat(inp.value));
   inp.addEventListener("input",run); run();
+  const pin=$id("ncpin");
+  if(pin) pin.addEventListener("click",()=>{
+    const v=parseFloat(inp.value); if(!v||v<=0) return;
+    NC.manual={date:new Date().toISOString().slice(0,10), close:v};   // 把「今天」釘住
+    MK.series=null; MK.view="both"; MK.focus=null;                    // 清掉舊序列→用「含今天」重建→預設疊圖
+    panel.classList.remove("show"); mkOpen();
+  });
   setTimeout(()=>{ try{ inp.focus({preventScroll:true}); inp.select(); }catch(_){} },300);
 }
 function ncCompute(v){
@@ -773,6 +783,7 @@ async function mkOpen(){
     const rows=(await fmGet("TaiwanStockPrice","TAIEX",shiftDays(today,-1300),today)).sort((a,b)=>a.date<b.date?-1:1);
     const closes=rows.map(r=>r.close), dates=rows.map(r=>r.date);
     if(closes.length<260) throw new Error("大盤資料不足。");
+    if(NC.manual && NC.manual.date > dates[dates.length-1]){ closes.push(NC.manual.close); dates.push(NC.manual.date); }  // 把手動輸入的「今天」接到歷史尾巴
     const f=fearSeries(closes), series=[];
     for(let i=0;i<f.length;i++) if(f[i])
       series.push({date:dates[i], score:f[i].score, close:closes[i], bias:f[i].bias, dd:f[i].dd, vol:f[i].vol});
@@ -839,7 +850,9 @@ function mkDraw(){
   const legend= mode==="both"
     ? `<div class="label" style="margin-bottom:4px"><span style="color:var(--ink)">━ 恐慌度 0–100</span>　<span style="color:var(--ink3)">━ 大盤 ${Math.round(imin0)}–${Math.round(imax0)}</span></div>`
     : "";
-  body.innerHTML=legend+`<div class="chartwrap">${svg}<div class="ctip" id="mktip">${mkTipInner(f,mode)}</div></div>`;
+  const manualNote= (NC.manual && s.length && s[s.length-1].date===NC.manual.date)
+    ? `<div class="label" style="color:var(--t-fear);margin-bottom:4px">● 最後一點＝你手動輸入的今天（${Math.round(NC.manual.close)}，非官方收盤；重整頁面即清除）</div>` : "";
+  body.innerHTML=legend+manualNote+`<div class="chartwrap">${svg}<div class="ctip" id="mktip">${mkTipInner(f,mode)}</div></div>`;
 
   // 拖曳掃描用：預存每點座標＋焦點元素參照，滑動時只改焦點、不重繪整張
   MK._pts=s.map((d,j)=>({x:X(j), yf:Yf(d.score), yi:Yi(d.close)}));
