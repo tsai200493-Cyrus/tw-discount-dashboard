@@ -1,13 +1,15 @@
 name: 更新打折窗口資料
 
-# 觸發：① 收盤後正式排程 ② 盤中暫估排程 ③ 你一改 watchlist 就重跑 ④ 手動按鈕
-# ⚠️ 下面判斷「是不是盤中」是比對 cron 字串，改這兩行時兩處要一起改。
+# 觸發：① 外部定時器（cron-job.org 打 workflow_dispatch）② GitHub 排程當備援 ③ 改 watchlist 就重跑 ④ 手動按鈕
+#
+# [決策 2026-11-06｜需求人] 盤中暫估不用 GitHub 排程，改由外部定時器觸發。
+#   前提：實測 GitHub 排程遲到 6～8 小時（11-05 盤中班到 21:26、22:29 才跑；11-06 盤中零次），盤中根本等不到。
+#   已知代價：多一個外部帳號要顧，token 到期前要換；定時器停了盤中就不更新，但收盤資料仍有下面的備援班。
+#   ⇒ 排錯線索：盤中沒更新先看 cron-job.org 的執行紀錄（401／403＝token 過期或權限不對）。
 on:
   schedule:
-    - cron: "0 10 * * 1-5"      # 每週一~五 UTC 10:00（台灣 18:00，收盤後）→ FinMind 正式資料
-    - cron: "*/30 1-5 * * 1-5"  # 台灣 09:00~13:30 每 30 分 → 盤中暫估（GitHub 排程常晚 5~30 分鐘）
-    - cron: "5 6 * * 1-5"       # 台灣 14:05 → 用收盤價先估一次，不用等到 18:00
-  workflow_dispatch:             # Actions 頁面可手動 Run
+    - cron: "0 10 * * 1-5"      # 正式資料的備援班：排台灣 18:00，實際常到半夜才跑；外部定時器掛了也還有收盤資料
+  workflow_dispatch:             # 外部定時器打這裡；Actions 頁面也可手動 Run
     inputs:
       live:
         description: "盤中暫估（用證交所即時報價）"
@@ -31,8 +33,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      # 盤中＝兩個盤中排程，或手動勾 live。其他觸發都是正式版。
-      LIVE: ${{ (github.event.schedule == '*/30 1-5 * * 1-5' || github.event.schedule == '5 6 * * 1-5' || inputs.live) && '1' || '0' }}
+      # 盤中＝觸發時帶 live=true。其他觸發都是正式版。
+      LIVE: ${{ inputs.live && '1' || '0' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -75,4 +77,5 @@ jobs:
           msg="chore: 更新打折窗口資料"
           [ "$LIVE" = "1" ] && msg="chore: 盤中暫估"
           git diff --staged --quiet || git commit -m "$msg [skip ci]"
+          git pull --rebase -q origin main   # 定時器班次變多，跑的這一兩分鐘內你可能剛好推了東西
           git push
