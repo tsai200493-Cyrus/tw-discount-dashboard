@@ -421,6 +421,14 @@
     border:1px solid color-mix(in srgb,var(--tone) 32%,transparent);font-size:13px;line-height:1.75;color:var(--ink)}
   .mbanner b{font-family:var(--disp)}
   .mbanner .mbx{display:inline-block;margin-top:6px;color:var(--tone);font-weight:600;cursor:pointer;text-decoration:underline}
+  /* 個股現價試算 */
+  .pw{margin-top:14px;padding-top:12px;border-top:1px dashed var(--hair2)}
+  .pw-h{display:flex;align-items:center;flex-wrap:wrap;gap:8px;font-size:12.5px;color:var(--ink3)}
+  .pw-in{width:7em;background:transparent;border:0;border-bottom:1.5px solid var(--ink);color:var(--ink);
+    font:600 18px var(--disp);padding:3px 0;outline:none;font-variant-numeric:tabular-nums}
+  .pw-out{margin-top:8px;min-height:1px}
+  .pw-r{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 14px;font-size:12.5px;color:var(--ink3)}
+  .pw-r b{font:600 26px var(--disp);margin-right:2px;letter-spacing:-.01em}
   #tip .k{font:900 18px var(--sans);letter-spacing:.06em;color:var(--ink);margin-bottom:6px}
   #tip .x{float:right;color:var(--ink3);font-size:12px}
   .chead{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}
@@ -774,6 +782,54 @@ function manualBanner(d){ const m=d.market||{};
   return `<div class="mbanner"><b>手動估算</b>：大盤恐慌度用你輸入的 <b>${m.score}</b>（指數 ${Math.round(m.close)}）重算了首屏那顆、大盤分、每檔綜合分與溫度計。<br>⚠「估值／股價」仍是最近收盤、不是即時；尾盤收盤後正式資料會蓋回。<span class="mbx">回到官方收盤 ✕</span></div>`;
 }
 document.addEventListener("click", e=>{ if(e.target.closest(".mbx")){ e.preventDefault(); clearManual(); } });
+
+// ── 個股現價試算：輸入某檔現價 → 抓它的歷史本益比分布，即時重算位階/估值/綜合分（一次一檔）──
+// 比較區間、配股校正都跟卡片／時光倒流一致（metric_since、per_fix），結果才對得上。
+const WF={cache:{}};
+async function cardWhatifData(code){
+  const ck=code+"|"+MODE;
+  if(ck in WF.cache) return WF.cache[ck];
+  const promise=(async()=>{
+    const meta=view((window.DATA&&window.DATA.stocks||[]).find(x=>x.code===code));
+    if(!meta||meta.metric==null||meta.metric_val==null||meta.price==null) return null;
+    const mKey=meta.metric==="pbr"?"PBR":"PER", perSince=meta.metric_since||null;
+    const today=new Date().toISOString().slice(0,10);
+    const perFrom=(perSince&&perSince<shiftDays(today,-2000))?perSince:shiftDays(today,-2000);
+    let per; try{ per=await fmGet("TaiwanStockPER",code,perFrom,today); }catch(_){ return null; }
+    const pf=meta.per_fix;
+    if(pf) per.forEach(r=>{ if(r.date>=pf.from){ if(r.PER)r.PER*=pf.factor; if(r.PBR)r.PBR*=pf.factor; } });
+    const pp=per.filter(r=>r[mKey]).sort((a,b)=>a.date<b.date?-1:1);
+    if(pp.length<200) return null;
+    const lastDate=pp[pp.length-1].date, cut=perSince||shiftDays(lastDate,-1825);
+    const vals=pp.filter(r=>r.date>=cut).map(r=>r[mKey]).sort((a,b)=>a-b);
+    if(vals.length<200) return null;
+    return {vals, lastPER:meta.metric_val, lastClose:meta.price, mKey};
+  })();
+  WF.cache[ck]=promise;
+  const r=await promise; WF.cache[ck]=r; return r;
+}
+document.addEventListener("input", async e=>{
+  const inp=e.target.closest(".pw-in"); if(!inp) return;
+  const box=inp.closest(".pw"); if(!box) return;
+  const code=box.dataset.code, out=box.querySelector(".pw-out"), price=parseFloat(inp.value);
+  if(!price||price<=0){ out.innerHTML=""; return; }
+  out.dataset.px=price;
+  if(!((code+"|"+MODE) in WF.cache)) out.innerHTML='<span class="label">載入歷史本益比…</span>';
+  const wf=await cardWhatifData(code);
+  if(+out.dataset.px!==price) return;                       // 使用者又改了 → 丟棄過期結果
+  if(!wf){ out.innerHTML='<span class="label">這檔算不出位階（本夢比或資料不足）。</span>'; return; }
+  const meta=view((window.DATA&&window.DATA.stocks||[]).find(x=>x.code===code));
+  const W=(window.DATA.weights)||{value:.4,fund:.25,market:.35};
+  const mScore=(window.DATA.market&&window.DATA.market.score!=null)?window.DATA.market.score:50;
+  const newVal=wf.lastPER*(price/wf.lastClose);
+  let below=0; for(const v of wf.vals) if(v<=newVal) below++;
+  const pctl=Math.round(below/wf.vals.length*100), valCheap=100-pctl;
+  const fund=meta.fund==null?45:meta.fund;
+  const comp=Math.round(W.value*valCheap+W.fund*fund+W.market*mScore);
+  const chg=(price/wf.lastClose-1)*100, mName=wf.mKey==="PBR"?"股價淨值比":"本益比";
+  out.innerHTML=`<div class="pw-r"><b style="color:${compColor(comp)}">${comp}</b>綜合　<span>${mName} ${newVal.toFixed(wf.mKey==="PBR"?2:1)}</span>　<span>位階 ${pctl}%</span>　<span class="${chg>0?'up':chg<0?'down':'flat'}">${chg>0?'+':''}${chg.toFixed(1)}%</span></div>`+
+    `<div class="label" style="margin-top:4px">官方 綜合 ${meta.composite}／位階 ${meta.metric_pctl}%（昨收 ${meta.price}）。只有「估值」即時，基本面／大盤不變；重整還原。</div>`;
+});
 // 浮標定位：x 是 viewBox 座標（svg width:100% ⇒ x/W 就是容器百分比）。
 // 靠邊時改成貼齊該側，避免浮標被切掉。
 function placeTip(el, x, W){
@@ -1612,7 +1668,7 @@ function detailHTML(s, prevScore){
         <div class="rb"><span style="width:${v}%;background:var(--ink)"></span><span style="width:${f}%;background:var(--ink3)"></span><span style="width:${mktPts}%;background:var(--tone)"></span>
           <span class="cap" style="width:${Math.max(0,100-CEIL)}%"></span><span class="ln"></span></div>
         <div class="rl"><div>${term("val_cheap","估值")}<b class="n">${f1(v)}<small> /${wv}</small></b></div><div>${term("fund","基本面")}<b class="n">${s.fund==null?"—":f1(f)}<small> /${wf}</small></b></div><div class="hot">${term("market","大盤")}<b class="n">${f1(mktPts)}<small> /${wm}</small></b></div></div></div>
-      <div class="blk"><span class="lbl">${li("val")}Valuation ·${mName(s)}在比較區間的位置</span>${peHTML(s)}</div>
+      <div class="blk"><span class="lbl">${li("val")}Valuation ·${mName(s)}在比較區間的位置</span>${peHTML(s)}${s.metric!=null?`<div class="pw" data-code="${s.code}"><div class="pw-h">現價試算 <input class="pw-in" type="number" inputmode="decimal" step="0.01" value="${s.price==null?"":s.price}"><span class="label" style="border:0">← 打進現價即時重算這檔位階</span></div><div class="pw-out"></div></div>`:""}</div>
       ${gap>0?`<div class="blk need"><span class="lbl">${li("trig")}Trigger ·怎樣才會打折</span>
         <div class="q"><span class="rhl">還差 <em>${gap}</em> 分，任一件發生就到</span></div>
         ${needM<=100?slider("大盤恐慌度",m.score,needM,""):no("大盤恐慌度","單靠大盤補不滿")}
