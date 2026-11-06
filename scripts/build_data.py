@@ -22,6 +22,7 @@ import os
 import re
 import statistics as st
 import sys
+import time
 from pathlib import Path
 from urllib import error, parse, request
 
@@ -95,12 +96,16 @@ def fetch_live(codes):
         url = MIS + "?" + parse.urlencode({"ex_ch": "|".join(chans[i:i + 40]),
                                            "json": 1, "delay": 0})
         req = request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-        try:
-            with request.urlopen(req, timeout=20) as resp:
-                msg = json.loads(resp.read().decode("utf-8")).get("msgArray") or []
-        except Exception as exc:  # noqa: BLE001
-            print(f"::warning::MIS 即時報價抓取失敗：{exc}")
-            return None
+        for attempt in range(3):      # GitHub 機器連 MIS 偶爾逾時（2026-11-06 實測 4 次有 1 次）
+            try:
+                with request.urlopen(req, timeout=20) as resp:
+                    msg = json.loads(resp.read().decode("utf-8")).get("msgArray") or []
+                break
+            except Exception as exc:  # noqa: BLE001
+                print(f"::warning::MIS 即時報價抓取失敗（第 {attempt + 1} 次）：{exc}")
+                if attempt == 2:
+                    return None
+                time.sleep(5 * (attempt + 1))
         for m in msg:
             if m.get("d") != today:                # 假日 MIS 回的是上一個交易日
                 continue
