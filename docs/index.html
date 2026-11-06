@@ -395,6 +395,26 @@
   #tip.show,#chart.show,#mkchart.show,#hchart.show{display:block;animation:sheetIn .4s var(--ease)}
   @keyframes sheetIn{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
   @media (prefers-reduced-motion:reduce){ #tip.show,#chart.show,#mkchart.show,#hchart.show{animation:none} }
+
+  /* 手動試算：你輸入此刻指數→瀏覽器即時算恐慌度（繞過 MIS/Yahoo 擋跨站） */
+  #nowcast{position:fixed;left:8px;right:8px;bottom:8px;margin:0 auto;display:none;max-width:560px;padding:20px 22px 22px;z-index:60;
+    max-height:calc(100vh - 16px);overflow-y:auto;overscroll-behavior:contain;
+    background:linear-gradient(150deg,color-mix(in srgb,var(--tone) 12%,var(--bg0)),color-mix(in srgb,var(--tone) 4%,var(--bg0)));
+    -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+    border:1px solid color-mix(in srgb,var(--tone) 18%,transparent);border-radius:20px;color:var(--ink);
+    box-shadow:0 30px 70px -30px color-mix(in srgb,var(--tone) 55%,transparent),0 0 0 100vmax color-mix(in srgb,var(--ink) 26%,transparent)}
+  @media (min-width:700px){ #nowcast{bottom:24px} }
+  #nowcast.show{display:block;animation:sheetIn .4s var(--ease)}
+  .nc-in{display:flex;align-items:center;gap:10px;margin:16px 0 6px}
+  .nc-in input{flex:1;min-width:0;background:transparent;border:0;border-bottom:1.5px solid var(--ink);color:var(--ink);
+    font:600 32px var(--disp);padding:6px 0;outline:none;font-variant-numeric:tabular-nums}
+  .nc-score{font:600 72px/.9 var(--disp);letter-spacing:-.03em;margin:10px 0 2px}
+  .nc-tag{font:700 15px var(--sans);letter-spacing:.06em}
+  .nc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px;border-top:1px solid var(--hair2);padding-top:14px}
+  .nc-grid>div{font-size:12px;color:var(--ink3)}
+  .nc-grid b{display:block;font:600 20px var(--disp);color:var(--ink);margin-bottom:2px}
+  .nc-form{font-size:12.5px;color:var(--ink3);margin-top:16px;line-height:1.75;border-left:2px solid var(--hair2);padding-left:10px}
+  .nclink{cursor:pointer}
   #tip .k{font:900 18px var(--sans);letter-spacing:.06em;color:var(--ink);margin-bottom:6px}
   #tip .x{float:right;color:var(--ink3);font-size:12px}
   .chead{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}
@@ -492,6 +512,10 @@
     <span class="cgrp"><button data-hr="250">1年</button><button data-hr="500">2年</button><button data-hr="750">3年</button><button data-hr="1250">5年</button></span>
   </div>
   <div class="hbody"></div>
+</div>
+<div id="nowcast">
+  <div class="chead"><b>手動試算・此刻恐慌度</b><span class="cx"><i class="ic ic-close"></i></span></div>
+  <div class="ncbody"><div class="label">載入中…</div></div>
 </div>
 
 <script>
@@ -665,6 +689,53 @@ function fearSeries(closes){
             bias, dd, vol};
   }
   return out;
+}
+
+// ── 手動試算此刻恐慌度：歷史收盤抓 FinMind（CORS 開放），今天的指數你手動輸入，套同一套公式即時算 ──
+let NC={closes:null, lastClose:null, loading:false};
+function ncTag(s){ return s>=80?"極度恐慌(罕見)":s>=65?"恐慌(機會)":s>=40?"中性":"貪婪(該收手)"; }
+function ncColor(s){ return s>=65?"var(--t-fear)":s>=40?"var(--t-mid)":"var(--t-greed)"; }
+async function openNowcast(){
+  const panel=$id("nowcast"), body=panel.querySelector(".ncbody");
+  panel.classList.add("show");
+  if(!NC.closes && !NC.loading){
+    NC.loading=true;
+    body.innerHTML='<div class="label">向 FinMind 取大盤歷史（約 1~2 秒）…</div>';
+    try{
+      const start=shiftYears(new Date().toISOString().slice(0,10),-2);   // 近2年足夠算120日線/250日高/20日波動
+      const rows=await fmGet("TaiwanStockPrice","TAIEX",start);
+      NC.closes=rows.filter(r=>r.close).sort((a,b)=>a.date<b.date?-1:1).map(r=>r.close);
+      NC.lastClose=NC.closes[NC.closes.length-1];
+    }catch(e){ body.innerHTML='<span class="err">'+(e.message||"取資料失敗")+'</span>'; NC.loading=false; return; }
+    NC.loading=false;
+  }
+  if(!NC.closes||NC.closes.length<260){ body.innerHTML='<span class="err">歷史資料不足（要約一年以上），算不出來。</span>'; return; }
+  body.innerHTML=
+    `<div class="nc-in"><input id="ncval" type="number" inputmode="decimal" step="1" value="${Math.round(NC.lastClose)}"></div>`+
+    `<div class="label">從看盤軟體或搜尋「台股加權指數」，把<b>現在的點數</b>打進上面這格（預設帶的是最近收盤 ${Math.round(NC.lastClose)}）。邊打邊算。</div>`+
+    `<div id="ncout"></div>`;
+  const inp=$id("ncval"); const run=()=>ncCompute(parseFloat(inp.value));
+  inp.addEventListener("input",run); run();
+  setTimeout(()=>{ try{ inp.focus({preventScroll:true}); inp.select(); }catch(_){} },300);
+}
+function ncCompute(v){
+  const out=$id("ncout"); if(!out) return;
+  if(!v||v<=0){ out.innerHTML='<div class="label">輸入一個指數點數看結果。</div>'; return; }
+  const f=fearSeries(NC.closes.concat([v])); const last=f[f.length-1];
+  if(!last){ out.innerHTML='<span class="err">算不出來（歷史資料不足）。</span>'; return; }
+  const s=last.score,
+        fb=Math.round(bclamp(50-last.bias*3.3)), fd=Math.round(bclamp(-last.dd*2.5)), fv=Math.round(bclamp((last.vol-12)/26*100)),
+        chg=(v/NC.lastClose-1)*100, col=ncColor(s);
+  out.innerHTML=
+    `<div class="nc-score n" style="color:${col}">${s}</div>`+
+    `<div class="nc-tag" style="color:${col}">${ncTag(s)}</div>`+
+    `<div class="label" style="margin-top:6px">相對最近收盤 ${Math.round(NC.lastClose)}：<b class="${chg>0?'up':chg<0?'down':'flat'}">${chg>0?'+':''}${chg.toFixed(1)}%</b></div>`+
+    `<div class="nc-grid">`+
+      `<div><b>${last.bias>0?'+':''}${last.bias.toFixed(1)}%</b>乖離120日線 → ${fb} 分</div>`+
+      `<div><b>${last.dd.toFixed(1)}%</b>距年高 → ${fd} 分</div>`+
+      `<div><b>${last.vol.toFixed(0)}%</b>20日波動 → ${fv} 分</div>`+
+    `</div>`+
+    `<div class="nc-form">恐慌度 ＝ 0.4×${fb} ＋ 0.3×${fd} ＋ 0.3×${fv} ＝ <b>${s}</b><br>歷史收盤取自 FinMind，今天的點數是你手動輸入的即時值；跟首屏那顆的差別只在「用現在 vs 用昨收」。</div>`;
 }
 // 浮標定位：x 是 viewBox 座標（svg width:100% ⇒ x/W 就是容器百分比）。
 // 靠邊時改成貼齊該側，避免浮標被切掉。
@@ -1033,11 +1104,13 @@ document.addEventListener("click", e=>{
   const hh=e.target.closest("#hchart .hshit");
   if(hh){ const r=hh.getBoundingClientRect(); HS.focus=Math.round(bclamp((e.clientX-r.left)/r.width,0,1)*(HS._n-1)); hsDraw(); e.stopPropagation(); return; }
   const cx=e.target.closest(".cx");
-  if(cx){ const m=cx.closest("#chart,#mkchart,#hchart"); if(m) m.classList.remove("show"); return; }
+  if(cx){ const m=cx.closest("#chart,#mkchart,#hchart,#nowcast"); if(m) m.classList.remove("show"); return; }
   const cl=e.target.closest(".chartlink");
   if(cl){ e.preventDefault(); tip.classList.remove("show"); openChart(cl.dataset.code); e.stopPropagation(); return; }
   const ml=e.target.closest(".mklink");
   if(ml){ e.preventDefault(); tip.classList.remove("show"); mkOpen(); e.stopPropagation(); return; }
+  const nl=e.target.closest(".nclink");
+  if(nl){ e.preventDefault(); tip.classList.remove("show"); openNowcast(); e.stopPropagation(); return; }
   const msw=e.target.closest(".modesw button[data-mode]");
   if(msw){
     MODE=msw.dataset.mode;
@@ -1064,6 +1137,8 @@ document.addEventListener("click", e=>{
   if(mkc && !e.target.closest("#mkchart")) mkc.classList.remove("show");
   const hsc=document.getElementById("hchart");
   if(hsc && !e.target.closest("#hchart")) hsc.classList.remove("show");
+  const ncp=document.getElementById("nowcast");
+  if(ncp && !e.target.closest("#nowcast") && !e.target.closest(".nclink")) ncp.classList.remove("show");
   if(!e.target.closest("#tip")) tip.classList.remove("show");
 });
 
@@ -1320,6 +1395,7 @@ function heroHTML(d){
         <div class="ends"><span>GREED 收手</span><span>FEAR 機會</span></div></div></div>
     <div class="stats"><span>大盤 <b>${esc(m.close)}</b></span><span>乖離120 <b>${m.bias>0?"+":""}${esc(m.bias)}%</b></span><span>距年高 <b>${esc(m.dd)}%</b></span><span>20日波動 <b>${esc(m.vol)}%</b></span></div>
     ${m.margin_note?`<div class="stats sm">${m.margin_note.split(" · ").map(x=>`<span>${x}</span>`).join("")}</div>`:""}
+    <div class="stats sm"><span class="nclink" style="color:#fff;border-bottom:1px dashed rgba(255,255,255,.55);padding-bottom:1px">盤中想看即時？手動輸入指數試算 →</span></div>
     ${moversHTML(d)}${modeSwitchHTML(d)}`;
 }
 
