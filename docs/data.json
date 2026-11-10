@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-11-10T05:31:46+00:00",
+  "generated_at": "2026-11-10T06:06:50+00:00",
   "market": {
     "score": 66,
     "tag": "恐慌(機會)",
-    "close": 42589,
-    "bias": -6.1,
-    "dd": -14.5,
-    "vol": 35.3,
+    "close": 42712,
+    "bias": -5.8,
+    "dd": -14.3,
+    "vol": 35.6,
     "date": "2026-11-10",
     "margin_note": "融資餘額 5399 億 · 近一年位階 59%（3037–6533） · 近一月 -16%"
   },
@@ -355,9 +355,9 @@
     {
       "code": "6669",
       "name": "緯穎",
-      "price": 1675.0,
+      "price": 1680.0,
       "metric": "per",
-      "metric_val": 14.77,
+      "metric_val": 14.82,
       "metric_pctl": 27,
       "metric_min": 5.0,
       "metric_median": 17.9,
@@ -615,7 +615,7 @@
         1650.0,
         1555.0,
         1645.0,
-        1675.0
+        1680.0
       ],
       "quality": {
         "score": 81,
@@ -631,7 +631,7 @@
       "label": "時機佳（便宜＋恐慌）",
       "alt": {
         "metric": "per",
-        "metric_val": 14.77,
+        "metric_val": 14.82,
         "metric_pctl": 25,
         "metric_min": 5.0,
         "metric_median": 17.9,
@@ -655,9 +655,9 @@
     {
       "code": "2382",
       "name": "廣達",
-      "price": 299.0,
+      "price": 298.5,
       "metric": "per",
-      "metric_val": 13.03,
+      "metric_val": 13.01,
       "metric_pctl": 30,
       "metric_min": 8.6,
       "metric_median": 15.9,
@@ -915,7 +915,7 @@
         300.0,
         290.5,
         296.5,
-        299.0
+        298.5
       ],
       "quality": {
         "score": 75,
@@ -931,7 +931,7 @@
       "label": "時機佳（便宜＋恐慌）",
       "alt": {
         "metric": "per",
-        "metric_val": 13.03,
+        "metric_val": 13.01,
         "metric_pctl": 9,
         "metric_min": 9.4,
         "metric_median": 16.9,
@@ -954,9 +954,9 @@
     {
       "code": "3037",
       "name": "欣興",
-      "price": 825.0,
+      "price": 828.0,
       "metric": "per",
-      "metric_val": 42.7,
+      "metric_val": 42.85,
       "metric_pctl": 70,
       "metric_min": 6.4,
       "metric_median": 26.6,
@@ -1214,7 +1214,7 @@
         800.0,
         727.0,
         757.0,
-        825.0
+        828.0
       ],
       "quality": {
         "score": 54,
@@ -1230,7 +1230,7 @@
       "label": "普通（中性）",
       "alt": {
         "metric": "per",
-        "metric_val": 42.7,
+        "metric_val": 42.85,
         "metric_pctl": 71,
         "metric_min": 6.4,
         "metric_median": 25.1,
@@ -1253,7 +1253,7 @@
     {
       "code": "3481",
       "name": "群創",
-      "price": 39.15,
+      "price": 39.2,
       "metric": "pbr",
       "metric_val": 1.39,
       "metric_pctl": 90,
@@ -1513,7 +1513,7 @@
         38.0,
         36.05,
         39.65,
-        39.15
+        39.2
       ],
       "quality": {
         "score": 5,
@@ -1552,9 +1552,9 @@
     {
       "code": "2454",
       "name": "聯發科",
-      "price": 3810.0,
+      "price": 3830.0,
       "metric": "per",
-      "metric_val": 62.92,
+      "metric_val": 63.25,
       "metric_pctl": 93,
       "metric_min": 6.8,
       "metric_median": 19.7,
@@ -1812,7 +1812,7 @@
         3460.0,
         3390.0,
         3725.0,
-        3810.0
+        3830.0
       ],
       "quality": {
         "score": 97,
@@ -1828,7 +1828,7 @@
       "label": "時機差（貴＋貪婪）",
       "alt": {
         "metric": "per",
-        "metric_val": 62.92,
+        "metric_val": 63.25,
         "metric_pctl": 95,
         "metric_min": 6.8,
         "metric_median": 21.7,
@@ -1851,9 +1851,9 @@
     {
       "code": "2408",
       "name": "南亞科",
-      "price": 381.0,
+      "price": 383.0,
       "metric": "pbr",
-      "metric_val": 3.2,
+      "metric_val": 3.22,
       "metric_pctl": 82,
       "metric_min": 0.48,
       "metric_median": 1.2,
@@ -2111,7 +2111,7 @@
         360.0,
         343.5,
         370.0,
-        381.0
+        383.0
       ],
       "quality": {
         "score": 0,
@@ -2127,7 +2127,7 @@
       "label": "普通（中性）",
       "alt": {
         "metric": "pbr",
-        "metric_val": 3.2,
+        "metric_val": 3.22,
         "metric_pctl": 78,
         "metric_min": 0.42,
         "metric_median": 1.68,
@@ -3049,10 +3049,10 @@
     {
       "code": "2360",
       "name": "致茂",
-      "price": 1300.0,
+      "price": 1310.0,
       "metric": "per",
-      "metric_val": 33.17,
-      "metric_pctl": 70,
+      "metric_val": 33.42,
+      "metric_pctl": 71,
       "metric_min": 13.6,
       "metric_median": 25.7,
       "metric_max": 88.4,
@@ -3060,7 +3060,7 @@
       "metric_cov": 100,
       "metric_n": 1211,
       "metric_since": null,
-      "val_cheap": 30,
+      "val_cheap": 29,
       "yoy": 163.3,
       "revenue_history": [
         {
@@ -3309,7 +3309,7 @@
         1335.0,
         1205.0,
         1250.0,
-        1300.0
+        1310.0
       ],
       "quality": {
         "score": 90,
@@ -3901,9 +3901,9 @@
     {
       "code": "2383",
       "name": "台光電",
-      "price": 4340.0,
+      "price": 4365.0,
       "metric": "per",
-      "metric_val": 46.49,
+      "metric_val": 46.76,
       "metric_pctl": 85,
       "metric_min": 7.6,
       "metric_median": 22.8,
@@ -4161,7 +4161,7 @@
         4100.0,
         3820.0,
         4070.0,
-        4340.0
+        4365.0
       ],
       "quality": {
         "score": 95,
@@ -4177,7 +4177,7 @@
       "label": "普通（中性）",
       "alt": {
         "metric": "per",
-        "metric_val": 46.49,
+        "metric_val": 46.76,
         "metric_pctl": 94,
         "metric_min": 6.9,
         "metric_median": 14.7,
@@ -4200,9 +4200,9 @@
     {
       "code": "2303",
       "name": "聯電",
-      "price": 100.0,
+      "price": 100.5,
       "metric": "per",
-      "metric_val": 14.77,
+      "metric_val": 14.84,
       "metric_pctl": 77,
       "metric_min": 5.8,
       "metric_median": 11.7,
@@ -4460,7 +4460,7 @@
         98.4,
         92.0,
         96.7,
-        100.0
+        100.5
       ],
       "quality": {
         "score": 70,
@@ -4484,10 +4484,10 @@
     {
       "code": "3105",
       "name": "穩懋",
-      "price": 481.5,
+      "price": 484.5,
       "metric": "pbr",
-      "metric_val": 4.66,
-      "metric_pctl": 91,
+      "metric_val": 4.69,
+      "metric_pctl": 92,
       "metric_min": 0.83,
       "metric_median": 1.99,
       "metric_max": 6.3,
@@ -4495,7 +4495,7 @@
       "metric_cov": 80,
       "metric_n": 1211,
       "metric_since": null,
-      "val_cheap": 9,
+      "val_cheap": 8,
       "yoy": 31.9,
       "revenue_history": [
         {
@@ -4744,7 +4744,7 @@
         451.0,
         406.0,
         446.5,
-        481.5
+        484.5
       ],
       "quality": {
         "score": 24,
@@ -5052,9 +5052,9 @@
     {
       "code": "8069",
       "name": "元太",
-      "price": 141.5,
+      "price": 142.0,
       "metric": "per",
-      "metric_val": 13.77,
+      "metric_val": 13.82,
       "metric_pctl": 0,
       "metric_min": 13.7,
       "metric_median": 25.9,
@@ -5312,7 +5312,7 @@
         141.0,
         142.5,
         144.0,
-        141.5
+        142.0
       ],
       "quality": {
         "score": 72,
@@ -5336,9 +5336,9 @@
     {
       "code": "1519",
       "name": "華城",
-      "price": 491.0,
+      "price": 492.5,
       "metric": "per",
-      "metric_val": 32.14,
+      "metric_val": 32.24,
       "metric_pctl": 20,
       "metric_min": 18.2,
       "metric_median": 40.7,
@@ -5596,7 +5596,7 @@
         493.5,
         452.0,
         497.0,
-        491.0
+        492.5
       ],
       "quality": {
         "score": 75,
@@ -5904,9 +5904,9 @@
     {
       "code": "1503",
       "name": "士電",
-      "price": 171.0,
+      "price": 170.5,
       "metric": "per",
-      "metric_val": 23.56,
+      "metric_val": 23.49,
       "metric_pctl": 31,
       "metric_min": 14.1,
       "metric_median": 28.5,
@@ -6164,7 +6164,7 @@
         168.5,
         159.0,
         174.5,
-        171.0
+        170.5
       ],
       "quality": {
         "score": 41,
@@ -6472,9 +6472,9 @@
     {
       "code": "6239",
       "name": "力成",
-      "price": 230.5,
+      "price": 230.0,
       "metric": "per",
-      "metric_val": 19.67,
+      "metric_val": 19.62,
       "metric_pctl": 74,
       "metric_min": 5.3,
       "metric_median": 12.5,
@@ -6732,7 +6732,7 @@
         220.0,
         203.5,
         223.5,
-        230.5
+        230.0
       ],
       "quality": {
         "score": 70,
@@ -6760,7 +6760,7 @@
     "market": 0.35
   },
   "intraday": {
-    "time": "13:30"
+    "time": "13:33"
   },
   "disclaimer": "溫度計不是買賣訊號。沒有模型能可靠擇時；它只給情境傾向。非投資建議，決策與風險自負。"
 }
