@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-11-10T02:02:48+00:00",
+  "generated_at": "2026-11-10T02:32:41+00:00",
   "market": {
     "score": 65,
     "tag": "恐慌(機會)",
-    "close": 43005,
-    "bias": -5.2,
-    "dd": -13.7,
-    "vol": 36.5,
+    "close": 42884,
+    "bias": -5.5,
+    "dd": -13.9,
+    "vol": 36.1,
     "date": "2026-11-10",
     "margin_note": "融資餘額 5399 億 · 近一年位階 59%（3037–6533） · 近一月 -16%"
   },
@@ -56,10 +56,10 @@
     {
       "code": "2330",
       "name": "台積電",
-      "price": 2265.0,
+      "price": 2270.0,
       "metric": "per",
-      "metric_val": 26.26,
-      "metric_pctl": 64,
+      "metric_val": 26.32,
+      "metric_pctl": 65,
       "metric_min": 12.5,
       "metric_median": 23.4,
       "metric_max": 34.9,
@@ -67,7 +67,7 @@
       "metric_cov": 100,
       "metric_n": 1211,
       "metric_since": null,
-      "val_cheap": 36,
+      "val_cheap": 35,
       "yoy": 54.6,
       "revenue_history": [
         {
@@ -316,7 +316,7 @@
         2240.0,
         2135.0,
         2235.0,
-        2265.0
+        2270.0
       ],
       "quality": {
         "score": 94,
@@ -332,7 +332,7 @@
       "label": "普通（中性）",
       "alt": {
         "metric": "per",
-        "metric_val": 26.26,
+        "metric_val": 26.32,
         "metric_pctl": 40,
         "metric_min": 17.4,
         "metric_median": 27.1,
@@ -355,10 +355,10 @@
     {
       "code": "6669",
       "name": "緯穎",
-      "price": 1725.0,
+      "price": 1710.0,
       "metric": "per",
-      "metric_val": 15.22,
-      "metric_pctl": 29,
+      "metric_val": 15.08,
+      "metric_pctl": 28,
       "metric_min": 5.0,
       "metric_median": 17.9,
       "metric_max": 38.5,
@@ -366,7 +366,7 @@
       "metric_cov": 100,
       "metric_n": 1211,
       "metric_since": null,
-      "val_cheap": 71,
+      "val_cheap": 72,
       "yoy": 80.9,
       "revenue_history": [
         {
@@ -615,7 +615,7 @@
         1650.0,
         1555.0,
         1645.0,
-        1725.0
+        1710.0
       ],
       "quality": {
         "score": 81,
@@ -627,12 +627,12 @@
       },
       "per_fix": null,
       "fund": 100,
-      "composite": 76,
+      "composite": 77,
       "label": "時機佳（便宜＋恐慌）",
       "alt": {
         "metric": "per",
-        "metric_val": 15.22,
-        "metric_pctl": 27,
+        "metric_val": 15.08,
+        "metric_pctl": 26,
         "metric_min": 5.0,
         "metric_median": 17.9,
         "metric_max": 38.5,
@@ -641,7 +641,7 @@
         "metric_n": 1855,
         "metric_since": "2019-03-01",
         "since_why": "上市起用全部歷史；AI帶來的是營收規模(5.5倍)不是營益率(4%→6~8%)，沒有新台階",
-        "val_cheap": 73,
+        "val_cheap": 74,
         "composite": 77,
         "label": "時機佳（便宜＋恐慌）"
       },
@@ -655,9 +655,9 @@
     {
       "code": "2382",
       "name": "廣達",
-      "price": 302.0,
+      "price": 301.5,
       "metric": "per",
-      "metric_val": 13.16,
+      "metric_val": 13.14,
       "metric_pctl": 30,
       "metric_min": 8.6,
       "metric_median": 15.9,
@@ -915,7 +915,7 @@
         300.0,
         290.5,
         296.5,
-        302.0
+        301.5
       ],
       "quality": {
         "score": 75,
@@ -931,7 +931,7 @@
       "label": "時機佳（便宜＋恐慌）",
       "alt": {
         "metric": "per",
-        "metric_val": 13.16,
+        "metric_val": 13.14,
         "metric_pctl": 9,
         "metric_min": 9.4,
         "metric_median": 16.9,
@@ -1253,9 +1253,9 @@
     {
       "code": "3481",
       "name": "群創",
-      "price": 40.8,
+      "price": 40.5,
       "metric": "pbr",
-      "metric_val": 1.45,
+      "metric_val": 1.44,
       "metric_pctl": 91,
       "metric_min": 0.35,
       "metric_median": 0.55,
@@ -1513,7 +1513,7 @@
         38.0,
         36.05,
         39.65,
-        40.8
+        40.5
       ],
       "quality": {
         "score": 5,
@@ -1529,7 +1529,7 @@
       "label": "時機差（貴＋貪婪）",
       "alt": {
         "metric": "pbr",
-        "metric_val": 1.45,
+        "metric_val": 1.44,
         "metric_pctl": 95,
         "metric_min": 0.2,
         "metric_median": 0.53,
@@ -1552,9 +1552,9 @@
     {
       "code": "2454",
       "name": "聯發科",
-      "price": 3990.0,
+      "price": 3940.0,
       "metric": "per",
-      "metric_val": 65.9,
+      "metric_val": 65.07,
       "metric_pctl": 94,
       "metric_min": 6.8,
       "metric_median": 19.7,
@@ -1812,7 +1812,7 @@
         3460.0,
         3390.0,
         3725.0,
-        3990.0
+        3940.0
       ],
       "quality": {
         "score": 97,
@@ -1828,7 +1828,7 @@
       "label": "時機差（貴＋貪婪）",
       "alt": {
         "metric": "per",
-        "metric_val": 65.9,
+        "metric_val": 65.07,
         "metric_pctl": 96,
         "metric_min": 6.8,
         "metric_median": 21.7,
@@ -1851,9 +1851,9 @@
     {
       "code": "2408",
       "name": "南亞科",
-      "price": 397.0,
+      "price": 394.0,
       "metric": "pbr",
-      "metric_val": 3.34,
+      "metric_val": 3.31,
       "metric_pctl": 83,
       "metric_min": 0.48,
       "metric_median": 1.2,
@@ -2111,7 +2111,7 @@
         360.0,
         343.5,
         370.0,
-        397.0
+        394.0
       ],
       "quality": {
         "score": 0,
@@ -2127,7 +2127,7 @@
       "label": "普通（中性）",
       "alt": {
         "metric": "pbr",
-        "metric_val": 3.34,
+        "metric_val": 3.31,
         "metric_pctl": 79,
         "metric_min": 0.42,
         "metric_median": 1.68,
@@ -2451,9 +2451,9 @@
     {
       "code": "1815",
       "name": "富喬",
-      "price": 137.5,
+      "price": 135.5,
       "metric": "pbr",
-      "metric_val": 5.87,
+      "metric_val": 5.79,
       "metric_pctl": 96,
       "metric_min": 0.65,
       "metric_median": 1.36,
@@ -2711,7 +2711,7 @@
         121.5,
         117.5,
         129.0,
-        137.5
+        135.5
       ],
       "quality": {
         "score": 10,
@@ -2727,7 +2727,7 @@
       "label": "普通（中性）",
       "alt": {
         "metric": "pbr",
-        "metric_val": 5.87,
+        "metric_val": 5.79,
         "metric_pctl": 99,
         "metric_min": 0.51,
         "metric_median": 0.89,
@@ -3333,9 +3333,9 @@
     {
       "code": "3030",
       "name": "德律",
-      "price": 233.0,
+      "price": 232.0,
       "metric": "per",
-      "metric_val": 16.9,
+      "metric_val": 16.83,
       "metric_pctl": 54,
       "metric_min": 7.6,
       "metric_median": 15.5,
@@ -3593,7 +3593,7 @@
         218.0,
         201.0,
         221.0,
-        233.0
+        232.0
       ],
       "quality": {
         "score": 88,
@@ -3617,9 +3617,9 @@
     {
       "code": "3563",
       "name": "牧德",
-      "price": 629.0,
+      "price": 625.0,
       "metric": "per",
-      "metric_val": 33.72,
+      "metric_val": 33.51,
       "metric_pctl": 52,
       "metric_min": 6.6,
       "metric_median": 31.5,
@@ -3877,7 +3877,7 @@
         584.0,
         557.0,
         595.0,
-        629.0
+        625.0
       ],
       "quality": {
         "score": 75,
@@ -4200,9 +4200,9 @@
     {
       "code": "2303",
       "name": "聯電",
-      "price": 102.5,
+      "price": 102.0,
       "metric": "per",
-      "metric_val": 15.14,
+      "metric_val": 15.06,
       "metric_pctl": 78,
       "metric_min": 5.8,
       "metric_median": 11.7,
@@ -4460,7 +4460,7 @@
         98.4,
         92.0,
         96.7,
-        102.5
+        102.0
       ],
       "quality": {
         "score": 70,
@@ -5052,9 +5052,9 @@
     {
       "code": "8069",
       "name": "元太",
-      "price": 148.0,
+      "price": 146.5,
       "metric": "per",
-      "metric_val": 14.4,
+      "metric_val": 14.25,
       "metric_pctl": 2,
       "metric_min": 13.7,
       "metric_median": 25.9,
@@ -5312,7 +5312,7 @@
         141.0,
         142.5,
         144.0,
-        148.0
+        146.5
       ],
       "quality": {
         "score": 72,
@@ -5620,9 +5620,9 @@
     {
       "code": "1513",
       "name": "中興電",
-      "price": 147.5,
+      "price": 147.0,
       "metric": "per",
-      "metric_val": 16.59,
+      "metric_val": 16.53,
       "metric_pctl": 26,
       "metric_min": 8.8,
       "metric_median": 20.3,
@@ -5880,7 +5880,7 @@
         143.5,
         138.5,
         145.0,
-        147.5
+        147.0
       ],
       "quality": {
         "score": 73,
@@ -5904,9 +5904,9 @@
     {
       "code": "1503",
       "name": "士電",
-      "price": 175.0,
+      "price": 174.0,
       "metric": "per",
-      "metric_val": 24.11,
+      "metric_val": 23.97,
       "metric_pctl": 32,
       "metric_min": 14.1,
       "metric_median": 28.5,
@@ -6164,7 +6164,7 @@
         168.5,
         159.0,
         174.5,
-        175.0
+        174.0
       ],
       "quality": {
         "score": 41,
@@ -6188,9 +6188,9 @@
     {
       "code": "2449",
       "name": "京元電",
-      "price": 229.0,
+      "price": 230.0,
       "metric": "per",
-      "metric_val": 30.02,
+      "metric_val": 30.15,
       "metric_pctl": 84,
       "metric_min": 5.2,
       "metric_median": 17.1,
@@ -6448,7 +6448,7 @@
         228.5,
         206.0,
         209.5,
-        229.0
+        230.0
       ],
       "quality": {
         "score": 79,
@@ -6472,10 +6472,10 @@
     {
       "code": "6239",
       "name": "力成",
-      "price": 237.0,
+      "price": 234.5,
       "metric": "per",
-      "metric_val": 20.22,
-      "metric_pctl": 76,
+      "metric_val": 20.01,
+      "metric_pctl": 75,
       "metric_min": 5.3,
       "metric_median": 12.5,
       "metric_max": 45.1,
@@ -6483,7 +6483,7 @@
       "metric_cov": 100,
       "metric_n": 1211,
       "metric_since": null,
-      "val_cheap": 24,
+      "val_cheap": 25,
       "yoy": 25.2,
       "revenue_history": [
         {
@@ -6732,7 +6732,7 @@
         220.0,
         203.5,
         223.5,
-        237.0
+        234.5
       ],
       "quality": {
         "score": 70,
@@ -6744,7 +6744,7 @@
       },
       "per_fix": null,
       "fund": 75,
-      "composite": 51,
+      "composite": 52,
       "label": "普通（中性）",
       "alt": null,
       "thesis": "<b>本業：記憶體封測起家，正轉往邏輯與先進封裝</b>。2026Q3 營收占比：邏輯約 43%、NAND 28%、DRAM 20%、SiP／模組 9%；先進封裝（Flip Chip BGA、Bumping、FOPLP、2.5D／3D）占三成以上。<br>賭兩件事：① 記憶體缺貨與漲價撐住現在的獲利：Q3 營收 253 億、毛利率 24.0%（一年前 16.1%）、營益率 17.7%、單季 EPS 3.55，封裝與測試稼動率超過 90%。② FOPLP 與矽光子讓它變成先進封裝廠：法人指超微 AI 晶片預計最快採用、2027 年中前量產；另與博通合作，新加坡合資案還在等投審司核准。<br>⚠ <b>現在賺的錢和想賭的故事不是同一件事</b>：記憶體仍占近五成，漲價是循環的順風；FOPLP 還沒量產，法人點名的風險是超微導入進度、量產良率、設備到位。<br>⚠ 公司正評估聯貸、現金增資、公司債、CB、GDR 等籌資工具，負債比 49.7%。後幾項若採用可能稀釋股權（這句是我的推論）。<br>⚠ 本益比位階約 71%（2026-11-06，即時看卡片），跌深不等於便宜。<br>加入原因：比對收藏筆記一支 ASIC 影片的線索，影片沒講公司名字，不代表就是它。<br><i>2026-11-07 AI 起草，你自己的持有理由請確認後改寫。</i>",
@@ -6760,7 +6760,7 @@
     "market": 0.35
   },
   "intraday": {
-    "time": "10:00"
+    "time": "10:30"
   },
   "disclaimer": "溫度計不是買賣訊號。沒有模型能可靠擇時；它只給情境傾向。非投資建議，決策與風險自負。"
 }
