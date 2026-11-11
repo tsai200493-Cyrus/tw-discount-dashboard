@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-11T06:07:38+00:00",
+  "generated_at": "2026-11-11T17:41:51+00:00",
   "market": {
     "score": 62,
     "tag": "中性",
@@ -8,7 +8,7 @@
     "dd": -11.2,
     "vol": 38.6,
     "date": "2026-11-11",
-    "margin_note": "融資餘額 5367 億 · 近一年位階 58%（3037–6533） · 近一月 -17%"
+    "margin_note": "融資餘額 5412 億 · 近一年位階 59%（3037–6533） · 近一月 -17%"
   },
   "prev": {
     "date": "2026-11-10",
@@ -58,7 +58,7 @@
       "name": "台積電",
       "price": 2395.0,
       "metric": "per",
-      "metric_val": 27.77,
+      "metric_val": 27.76,
       "metric_pctl": 76,
       "metric_min": 12.5,
       "metric_median": 23.4,
@@ -332,7 +332,7 @@
       "label": "普通（中性）",
       "alt": {
         "metric": "per",
-        "metric_val": 27.77,
+        "metric_val": 27.76,
         "metric_pctl": 59,
         "metric_min": 17.4,
         "metric_median": 27.1,
@@ -657,7 +657,7 @@
       "name": "廣達",
       "price": 298.0,
       "metric": "per",
-      "metric_val": 12.99,
+      "metric_val": 12.16,
       "metric_pctl": 30,
       "metric_min": 8.6,
       "metric_median": 15.9,
@@ -931,8 +931,8 @@
       "label": "時機佳（便宜＋恐慌）",
       "alt": {
         "metric": "per",
-        "metric_val": 12.99,
-        "metric_pctl": 9,
+        "metric_val": 12.16,
+        "metric_pctl": 8,
         "metric_min": 9.4,
         "metric_median": 16.9,
         "metric_max": 35.5,
@@ -941,8 +941,8 @@
         "metric_n": 930,
         "metric_since": "2023-01-01",
         "since_why": "成長主軸從NB轉AI伺服器，營益率1.8%→4.4%",
-        "val_cheap": 91,
-        "composite": 83,
+        "val_cheap": 92,
+        "composite": 84,
         "label": "時機佳（便宜＋恐慌）"
       },
       "thesis": "<b>本業：伺服器與筆電代工（ODM）</b>——幫品牌與雲端大廠設計、組裝整機，旗下雲達 QCT 直接把伺服器賣給 CSP。原本是全球最大筆電代工廠，重心已轉到 AI 伺服器。<br>伺服器業務裡 AI 伺服器已占約八成（2026 全年目標）；高單價 GB300 出貨已超過 GB200，下半年 ASIC 伺服器出貨倍增，法說稱訂單能見度到 2028。<br>⚠ 代工的本質沒變：營益率從 1.8% 升到 4.4%，是「薄利變稍厚」，不是變成高毛利公司——營收再大，毛利率一點波動就很有感。<br><i>論點破 2026-11-06 AI 起草；持有理由待你補。</i>",
@@ -1554,7 +1554,7 @@
       "name": "聯發科",
       "price": 3990.0,
       "metric": "per",
-      "metric_val": 65.89,
+      "metric_val": 65.9,
       "metric_pctl": 94,
       "metric_min": 6.8,
       "metric_median": 19.7,
@@ -1828,7 +1828,7 @@
       "label": "時機差（貴＋貪婪）",
       "alt": {
         "metric": "per",
-        "metric_val": 65.89,
+        "metric_val": 65.9,
         "metric_pctl": 96,
         "metric_min": 6.8,
         "metric_median": 21.7,
@@ -2752,7 +2752,7 @@
       "name": "德宏",
       "price": 204.0,
       "metric": "pbr",
-      "metric_val": 23.81,
+      "metric_val": 23.8,
       "metric_pctl": 91,
       "metric_min": 0.94,
       "metric_median": 2.02,
@@ -3026,7 +3026,7 @@
       "label": "普通（中性）",
       "alt": {
         "metric": "pbr",
-        "metric_val": 23.81,
+        "metric_val": 23.8,
         "metric_pctl": 97,
         "metric_min": 0.34,
         "metric_median": 1.22,
@@ -3619,7 +3619,7 @@
       "name": "牧德",
       "price": 623.0,
       "metric": "per",
-      "metric_val": 33.41,
+      "metric_val": 33.4,
       "metric_pctl": 52,
       "metric_min": 6.6,
       "metric_median": 31.6,
@@ -4486,8 +4486,8 @@
       "name": "穩懋",
       "price": 521.0,
       "metric": "pbr",
-      "metric_val": 5.04,
-      "metric_pctl": 96,
+      "metric_val": 4.88,
+      "metric_pctl": 95,
       "metric_min": 0.83,
       "metric_median": 1.99,
       "metric_max": 6.3,
@@ -4495,7 +4495,7 @@
       "metric_cov": 80,
       "metric_n": 1211,
       "metric_since": null,
-      "val_cheap": 4,
+      "val_cheap": 5,
       "yoy": 31.9,
       "revenue_history": [
         {
@@ -4770,7 +4770,7 @@
       "name": "奇鋐",
       "price": 3040.0,
       "metric": "per",
-      "metric_val": 33.6,
+      "metric_val": 33.61,
       "metric_pctl": 61,
       "metric_min": 9.3,
       "metric_median": 29.0,
@@ -5054,8 +5054,8 @@
       "name": "元太",
       "price": 145.0,
       "metric": "per",
-      "metric_val": 14.1,
-      "metric_pctl": 1,
+      "metric_val": 16.27,
+      "metric_pctl": 10,
       "metric_min": 13.7,
       "metric_median": 25.9,
       "metric_max": 52.3,
@@ -5063,7 +5063,7 @@
       "metric_cov": 100,
       "metric_n": 1211,
       "metric_since": null,
-      "val_cheap": 99,
+      "val_cheap": 90,
       "yoy": 74.4,
       "revenue_history": [
         {
@@ -5324,7 +5324,7 @@
       },
       "per_fix": null,
       "fund": 100,
-      "composite": 86,
+      "composite": 83,
       "label": "時機佳（便宜＋恐慌）",
       "alt": null,
       "thesis": "<b>本業：電子紙</b>（全球主要的電子紙模組供應商）——電子貨架標籤（ESL）、閱讀器、電子看板。高毛利、掌握材料專利，是這個利基市場的主導者。<br>賭 ESL 與彩色電子紙持續滲透，加上大尺寸看板打開新用途。2026Q2 營收 102 億、毛利率 58.7%、營益率 34.7%、單季 EPS 3.23。<br>⚠ <b>位階 0% 不等於撿到便宜</b>：本益比是近 5 年最低，但 2026 上半年營收 188.5 億，跟 2025 上半年 186.9 億幾乎持平，7 月月營收還年減 26%。市場可能是在懷疑成長，不是忘了它。先搞清楚為什麼沒人要，再談便宜。<br>⚠ 單季起伏大：2025Q4 營益率掉到 9.8%，隔季又回到 32.6%。ESL 的成長數字我只查到 2024 年以前的舊報導，2026 年現況還沒查到。<br><i>2026-11-06 AI 起草，你自己的持有理由請確認後改寫。</i>",
@@ -5906,7 +5906,7 @@
       "name": "士電",
       "price": 173.5,
       "metric": "per",
-      "metric_val": 23.89,
+      "metric_val": 23.9,
       "metric_pctl": 32,
       "metric_min": 14.1,
       "metric_median": 28.5,
@@ -6190,7 +6190,7 @@
       "name": "京元電",
       "price": 231.0,
       "metric": "per",
-      "metric_val": 30.67,
+      "metric_val": 30.68,
       "metric_pctl": 85,
       "metric_min": 5.2,
       "metric_median": 17.1,
@@ -6474,7 +6474,7 @@
       "name": "力成",
       "price": 242.0,
       "metric": "per",
-      "metric_val": 20.64,
+      "metric_val": 20.65,
       "metric_pctl": 77,
       "metric_min": 5.3,
       "metric_median": 12.5,
@@ -6759,8 +6759,6 @@
     "fund": 0.25,
     "market": 0.35
   },
-  "intraday": {
-    "time": "13:33"
-  },
+  "intraday": null,
   "disclaimer": "溫度計不是買賣訊號。沒有模型能可靠擇時；它只給情境傾向。非投資建議，決策與風險自負。"
 }
