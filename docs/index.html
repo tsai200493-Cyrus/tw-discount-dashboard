@@ -465,6 +465,8 @@
   .cbtns button{padding:6px 13px;border:1px solid color-mix(in srgb,var(--ink) 35%,transparent);border-radius:999px;
     background:transparent;color:var(--ink2);font:500 12.5px var(--sans);letter-spacing:.06em;cursor:pointer}
   .cgrp{display:flex;gap:6px;flex-wrap:nowrap}
+  .mkera{flex-basis:100%;align-items:center;flex-wrap:wrap}   /* 回看三顆：自成一列 */
+  .mkera .label{margin-right:2px}
   .cbtns button.on{background:var(--tone);color:#fff;border-color:var(--tone)}
   .csp{flex:1}
   #chart svg text,#mkchart svg text,#hchart svg text{font-family:var(--disp)}
@@ -540,6 +542,7 @@
     <span class="cgrp"><button data-mv="fear">恐慌度</button><button data-mv="index">大盤指數</button><button data-mv="both">疊圖</button></span>
     <span class="csp"></span>
     <span class="cgrp"><button data-mr="125">6月</button><button data-mr="250">1年</button><button data-mr="500">2年</button><button data-mr="1250">5年</button><button data-mr="99999" title="2000 年起（含網路泡沫、金融海嘯）">全部</button></span>
+    <span class="cgrp mkera"><span class="label">回看</span><button data-era="2000" title="1999-12～2003-06：泡沫消氣">2000 泡沫</button><button data-era="2008" title="2007～2009：金融海嘯">2008 海嘯</button><button data-era="2020" title="2019-07～2021-06：被嚇一跳">2020 疫情</button></span>
   </div>
   <div class="mkbody"></div>
 </div>
@@ -904,17 +907,20 @@ function mkTipInner(d, mode){        // 浮標內容（拖曳時即時換這段�
   const l2= mode==="index" ? `${idx} · ${fear}`
           : mode==="both"  ? `${fear} · ${idx}`
           : `${fear} · 乖離 ${d.bias>0?"+":""}${Math.round(d.bias*10)/10}%`;
-  return `<b>${d.date}</b><div class="t2">${l2}</div>`;
+  const l3= (MK._smooth && mode!=="index") ? `<div class="t2">20 日平均 <b>${Math.round(d.ma)}</b></div>` : "";
+  return `<b>${d.date}</b><div class="t2">${l2}</div>${l3}`;
 }
+// 回看三段：泡沫消氣（2000、2008）vs 被嚇一跳（2020）的對照組，各取前後約 2~3 年
+const MK_ERAS={"2000":["1999-12-01","2003-06-30"], "2008":["2007-01-01","2009-12-31"], "2020":["2019-07-01","2021-06-30"]};
 function mkSync(){
   document.querySelectorAll("#mkchart .cbtns button").forEach(b=>{
-    b.classList.toggle("on", b.dataset.mv===MK.view || (+b.dataset.mr)===MK.range);
+    b.classList.toggle("on", b.dataset.mv===MK.view || (!MK.era && (+b.dataset.mr)===MK.range) || (!!MK.era && b.dataset.era===MK.era));
   });
 }
 async function mkOpen(){
   const modal=document.getElementById("mkchart"), body=document.querySelector("#mkchart .mkbody");
   modal.classList.add("show");
-  const full=MK.range>500;                       // 5年／全部 才抓 1999 起的完整歷史（約 1.4MB），平常只抓近 3.5 年
+  const full=MK.range>500 || !!MK.era;           // 5年／全部／回看 才抓 1999 起的完整歷史（約 1.4MB），平常只抓近 3.5 年
   if(MK.series && (MK.full || !full)){ MK.focus=null; mkDraw(); mkSync(); return; }
   body.innerHTML=full
     ? '<div class="label">計算中…（向 FinMind 取 1999 年起的大盤歷史，約 3~8 秒）</div>'
@@ -928,13 +934,20 @@ async function mkOpen(){
     const f=fearSeries(closes), series=[];
     for(let i=0;i<f.length;i++) if(f[i])
       series.push({date:dates[i], score:f[i].score, close:closes[i], bias:f[i].bias, dd:f[i].dd, vol:f[i].vol});
+    let acc=0;                                       // 20 日平均（長區間畫這條；在整條序列上算，切區間時開頭才不會失真）
+    series.forEach((d,i)=>{ acc+=d.score; if(i>=20) acc-=series[i-20].score; d.ma=acc/Math.min(i+1,20); });
     MK.series=series; MK.full=full; MK.focus=null; mkDraw(); mkSync();
   }catch(e){ body.innerHTML='<span class="err">'+(e.message||"取資料失敗")+'</span>'; }
 }
 function mkDraw(){
   const body=document.querySelector("#mkchart .mkbody");
   if(!MK.series || !MK.series.length){ body.innerHTML='<div class="label">抓不到大盤資料，稍後再試。</div>'; return; }
-  const s=MK.series.slice(-MK.range), n=s.length; MK._n=n;
+  const era=MK.era&&MK_ERAS[MK.era];
+  const s= era ? MK.series.filter(d=>d.date>=era[0] && d.date<=era[1]) : MK.series.slice(-MK.range), n=s.length; MK._n=n;
+  if(!n){ body.innerHTML='<div class="label">這段沒有資料。</div>'; return; }
+  // 超過約 4 年（5年／全部）：每像素塞好幾天，日線會糊成一團 ⇒ 主線改畫 20 日平均，日線淡淡留在背景。
+  // 代價：幾天就退的尖峰會被磨平（2020-03 當天 82，平均只到 70 幾）；浮標仍顯示當天真實分數。
+  const smooth=n>1000; MK._smooth=smooth;
   if(MK.focus==null) MK.focus=n-1;
   MK.focus=Math.max(0,Math.min(n-1,MK.focus));
   const mode=MK.view;                       // fear | index | both
@@ -973,14 +986,19 @@ function mkDraw(){
   if(showIndex){ let p=""; s.forEach((d,j)=> p+=`${X(j).toFixed(1)},${Yi(d.close).toFixed(1)} `);
     lines+=`<polyline points="${p.trim()}" fill="none" stroke="var(--ink3)" stroke-width="${logY?1:1.3}" opacity="${mode==="both"?".9":"1"}"/>`; }
   if(showFear){ let p=""; s.forEach((d,j)=> p+=`${X(j).toFixed(1)},${Yf(d.score).toFixed(1)} `);
-    lines+=`<polyline points="${p.trim()}" fill="none" stroke="var(--ink)" stroke-width="${logY?.7:1.6}"/>`; }
+    if(smooth){
+      lines+=`<polyline points="${p.trim()}" fill="none" stroke="var(--ink)" stroke-width=".5" opacity=".18"/>`;
+      let q=""; s.forEach((d,j)=> q+=`${X(j).toFixed(1)},${Yf(d.ma).toFixed(1)} `);
+      lines+=`<polyline points="${q.trim()}" fill="none" stroke="var(--ink)" stroke-width="1.3"/>`;
+    } else lines+=`<polyline points="${p.trim()}" fill="none" stroke="var(--ink)" stroke-width="${logY?1.1:1.6}"/>`; }
+  const fy=d=> Yf(smooth?d.ma:d.score);             // 焦點圓點跟著畫出來的那條線
 
   let marks="";
   const yrEvery= n>2000?5:1;                       // 全部：每 5 年一條；5 年以內：每年一條
   s.forEach((d,j)=>{
     if(d.date.slice(5,7)==="01" && (j===0 || s[j-1].date.slice(5,7)!=="01") && (+d.date.slice(0,4))%yrEvery===0){
       marks+=`<line x1="${X(j).toFixed(1)}" y1="${padT}" x2="${X(j).toFixed(1)}" y2="${(padT+ih).toFixed(1)}" stroke="var(--line)" stroke-width=".6" stroke-dasharray="2 2"/>`;
-      if(logY && X(j)>padL+40 && X(j)<W-padR-40)    // 長區間標年份（避開頭尾的起訖標籤，約 40 單位寬）
+      if((logY||era) && X(j)>padL+40 && X(j)<W-padR-40)    // 長區間／回看標年份（避開頭尾的起訖標籤，約 40 單位寬）
         marks+=`<text x="${X(j).toFixed(1)}" y="${H-6}" font-size="7" fill="var(--muted)" text-anchor="middle">${d.date.slice(0,4)}</text>`;
     }
   });
@@ -991,20 +1009,22 @@ function mkDraw(){
   let foc=`<line id="mkfl" x1="${fx.toFixed(1)}" y1="${padT}" x2="${fx.toFixed(1)}" y2="${(padT+ih).toFixed(1)}" stroke="var(--muted)" stroke-width=".7"/>`;
   if(showIndex) foc+=`<circle class="focping" id="mkpi" cx="${fx.toFixed(1)}" cy="${Yi(f.close).toFixed(1)}" r="3.2" fill="var(--ink3)"/>`+
                      `<circle id="mkdi" cx="${fx.toFixed(1)}" cy="${Yi(f.close).toFixed(1)}" r="2.6" fill="var(--ink3)"/>`;
-  if(showFear) foc+=`<circle class="focping" id="mkpf" cx="${fx.toFixed(1)}" cy="${Yf(f.score).toFixed(1)}" r="3.2" fill="var(--tone)"/>`+
-                    `<circle id="mkdf" cx="${fx.toFixed(1)}" cy="${Yf(f.score).toFixed(1)}" r="2.6" fill="var(--tone)"/>`;
+  if(showFear) foc+=`<circle class="focping" id="mkpf" cx="${fx.toFixed(1)}" cy="${fy(f).toFixed(1)}" r="3.2" fill="var(--tone)"/>`+
+                    `<circle id="mkdf" cx="${fx.toFixed(1)}" cy="${fy(f).toFixed(1)}" r="2.6" fill="var(--tone)"/>`;
   const hit=`<rect class="mkhit" x="${padL}" y="${padT}" width="${iw}" height="${ih}" fill="transparent" style="cursor:crosshair;touch-action:none"/>`;
   const svg=`<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">${bg}${lines}${marks}${foc}${hit}</svg>`;
 
+  const fearLbl= smooth ? "━ 恐慌度 20 日平均（淡線＝每日）" : "━ 恐慌度 0–100";
   const legend= mode==="both"
-    ? `<div class="label" style="margin-bottom:4px"><span style="color:var(--ink)">━ 恐慌度 0–100</span>　<span style="color:var(--ink3)">━ 大盤 ${Math.round(imin0)}–${Math.round(imax0)}${logY?"（對數刻度）":""}</span></div>`
+    ? `<div class="label" style="margin-bottom:4px"><span style="color:var(--ink)">${fearLbl}</span>　<span style="color:var(--ink3)">━ 大盤 ${Math.round(imin0)}–${Math.round(imax0)}${logY?"（對數刻度）":""}</span></div>`
+    : mode==="fear" ? (smooth ? `<div class="label" style="margin-bottom:4px">${fearLbl}</div>` : "")
     : logY ? `<div class="label" style="margin-bottom:4px">大盤為對數刻度：同樣的高度＝同樣的漲跌幅度</div>` : "";
   const manualNote= (NC.manual && s.length && s[s.length-1].date===NC.manual.date)
     ? `<div class="label" style="color:var(--t-fear);margin-bottom:4px">● 最後一點＝你手動輸入的今天（${Math.round(NC.manual.close)}，非官方收盤；重整頁面即清除）</div>` : "";
   body.innerHTML=legend+manualNote+`<div class="chartwrap">${svg}<div class="ctip" id="mktip">${mkTipInner(f,mode)}</div></div>`;
 
   // 拖曳掃描用：預存每點座標＋焦點元素參照，滑動時只改焦點、不重繪整張
-  MK._pts=s.map((d,j)=>({x:X(j), yf:Yf(d.score), yi:Yi(d.close)}));
+  MK._pts=s.map((d,j)=>({x:X(j), yf:fy(d), yi:Yi(d.close)}));
   MK._s=s; MK._mode=mode; MK._W=W;
   MK._fl=body.querySelector("#mkfl"); MK._df=body.querySelector("#mkdf"); MK._di=body.querySelector("#mkdi"); MK._pf=body.querySelector("#mkpf"); MK._pi=body.querySelector("#mkpi");
   MK._tip=body.querySelector("#mktip"); placeTip(MK._tip, fx, W);
@@ -1257,10 +1277,11 @@ document.addEventListener("click", e=>{
   if(cbtn){ if(cbtn.dataset.v)CH.view=cbtn.dataset.v; if(cbtn.dataset.r){CH.range=+cbtn.dataset.r; CH.focus=null;} drawChart(); syncBtns(); e.stopPropagation(); return; }
   const hit=e.target.closest("#chart .hit");
   if(hit){ CH.focus=+hit.getAttribute("data-i"); drawChart(); e.stopPropagation(); return; }
-  const mbtn=e.target.closest("#mkchart [data-mv],#mkchart [data-mr]");
+  const mbtn=e.target.closest("#mkchart [data-mv],#mkchart [data-mr],#mkchart [data-era]");
   if(mbtn){ if(mbtn.dataset.mv)MK.view=mbtn.dataset.mv;
-    if(mbtn.dataset.mr){MK.range=+mbtn.dataset.mr; MK.focus=null;
-      if(MK.range>500 && !MK.full){ mkSync(); mkOpen(); e.stopPropagation(); return; } }   // 長區間第一次點 → 補抓完整歷史
+    if(mbtn.dataset.mr){MK.range=+mbtn.dataset.mr; MK.era=null; MK.focus=null;}
+    if(mbtn.dataset.era){MK.era=mbtn.dataset.era; MK.focus=null;}
+    if((MK.range>500 || MK.era) && !MK.full){ mkSync(); mkOpen(); e.stopPropagation(); return; }   // 長區間／回看第一次點 → 補抓完整歷史   // 長區間第一次點 → 補抓完整歷史
     mkDraw(); mkSync(); e.stopPropagation(); return; }
   const mh=e.target.closest("#mkchart .mkhit");
   if(mh){ const r=mh.getBoundingClientRect(); const frac=bclamp((e.clientX-r.left)/r.width,0,1); MK.focus=Math.round(frac*(MK._n-1)); mkDraw(); e.stopPropagation(); return; }
