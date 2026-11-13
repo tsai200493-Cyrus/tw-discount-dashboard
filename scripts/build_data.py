@@ -580,11 +580,57 @@ def _q_equity_by_year(bs_rows):
     return out
 
 
-def quality_fingerprint(code):
+def fetch_fs(code):
+    """近 6 年的季損益表。財務指紋與獲利率變化共用這一份，免得同一檔打兩次 API。"""
+    return _get("TaiwanStockFinancialStatements", code, f"{dt.date.today().year - 6}-01-01")
+
+
+MARGIN_DROP = -15   # 營益率比去年同季「相對」下滑超過 15% 就亮標籤（2026-11-13 試算抓的，未回測）
+
+
+def margin_trend(fs):
+    """最新一季營益率 vs 去年同季。只做標籤、不進綜合分數。
+
+    ［決策 2026-11-13｜需求人］獲利率下滑只亮標籤，不併入進場時機分數。
+      前提：試算 23 檔（2026-11-13）——把獲利率混進基本面，會誤扣「營收分已滿分、
+        獲利率只是持平」的股票（緯穎持平也被扣 5 分）；只按變化加減則影響太小
+        （廣達 77→74，因為基本面只占 25%、營收分本來就滿）。要讓分數真的反映它就得改權重，
+        之前所有回測都會失去可比性。所以跟「好公司打折線」一樣，只加標籤。
+      已知代價：分數還是看不到獲利率；標籤亮了也不會讓股票掉出打折區，要靠人看。
+        年比年一季才更新一次；門檻 15% 沒有回測過。
+      ⇒ 排錯線索：覺得「分數高但明明在走下坡」時，先看這個標籤，不是分數算錯。
+    比「相對」變化而不是百分點：廣達 3.7%→2.9% 只少 0.8 個百分點，對 2.9% 的生意卻是少賺五分之一。
+    去年同季營益率太接近 0（|x|<0.5%）時相對變化沒有意義，只回傳數字、不判斷。
+    """
+    if isinstance(fs, dict) or not fs:
+        return None
+    q = {}
+    for r in fs:
+        if r.get("type") in ("Revenue", "GrossProfit", "OperatingIncome"):
+            q.setdefault(r["date"], {})[r["type"]] = r.get("value") or 0.0
+    q = {k: v for k, v in q.items() if v.get("Revenue")}
+    if not q:
+        return None
+    last = max(q)
+    ly = f"{int(last[:4]) - 1}{last[4:]}"
+    if ly not in q:
+        return None
+    pct = lambda k, key: q[k].get(key, 0.0) / q[k]["Revenue"] * 100
+    om1, om0 = pct(last, "OperatingIncome"), pct(ly, "OperatingIncome")
+    rel = (om1 - om0) / abs(om0) * 100 if abs(om0) >= 0.5 else None
+    quarter = f"{last[:4]}Q{(int(last[5:7]) + 2) // 3}"
+    return {"q": quarter, "om": round(om1, 1), "om_ly": round(om0, 1),
+            "gm": round(pct(last, "GrossProfit"), 1), "gm_ly": round(pct(ly, "GrossProfit"), 1),
+            "rel": None if rel is None else round(rel),
+            "drop": rel is not None and rel <= MARGIN_DROP}
+
+
+def quality_fingerprint(code, fs=None):
     """近幾完整年的 ROE 水準 ＋ 毛利率穩定度 ＋ 營益率，衡量「是不是好生意」。
     與『基本面(短期營收動能)』互補；刻意不併入進場時機。抓不到回 None。"""
     start = f"{dt.date.today().year - 6}-01-01"
-    fs = _get("TaiwanStockFinancialStatements", code, start)
+    if fs is None:
+        fs = fetch_fs(code)
     if isinstance(fs, dict) or not fs:
         return None
     bs = _get("TaiwanStockBalanceSheet", code, start)
@@ -638,14 +684,16 @@ def build_stock(code, name, mkf, since=None, why=None):
     ps = price_series(code, fix)
     price = ps["last"] if ps else None
     spark = ps["spark"] if ps else None              # 近65日收盤（火花線）
-    quality = quality_fingerprint(code)              # 財務指紋（品質），與進場時機分開
+    fs = fetch_fs(code)
+    quality = quality_fingerprint(code, fs)          # 財務指紋（品質），與進場時機分開
+    margin = margin_trend(fs)                        # 獲利率年變化（只做標籤）
     yoy = rd["latest_yoy"] if rd else None          # 單月 YoY（計分＋顯示）
     history = rd["history"] if rd else None          # 近36月明細（圖表用）
     if vb is None:  # 估值算不出來（本夢比），或估值資料本身可疑 → 一律排除評分
         return {"code": code, "name": name, "price": price, "metric": None,
                 "metric_val": None, "metric_pctl": None, "val_cheap": None, "yoy": yoy,
                 "revenue_history": history, "spark": spark, "quality": quality,
-                "per_fix": fix, "data_warn": refuse, "fund": None, "composite": None,
+                "margin": margin, "per_fix": fix, "data_warn": refuse, "fund": None, "composite": None,
                 "label": "資料異常(暫不評分)" if refuse else "資料不足(本夢比)"}
     val_cheap = 100 - vb["pctl"]
     fund = None if yoy is None else round(clamp(45 + yoy * 1.2))
@@ -668,7 +716,7 @@ def build_stock(code, name, mkf, since=None, why=None):
             "metric_why": vb["why"], "metric_cov": vb["coverage"], "metric_n": vb["n"],
             "metric_since": vb["since"],
             "val_cheap": val_cheap, "yoy": yoy, "revenue_history": history,
-            "spark": spark, "quality": quality, "per_fix": fix,
+            "spark": spark, "quality": quality, "margin": margin, "per_fix": fix,
             "fund": fund, "composite": composite,
             "label": window_label(composite), "alt": alt_out}
 

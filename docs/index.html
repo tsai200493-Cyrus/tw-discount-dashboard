@@ -195,6 +195,9 @@
   .s-head .code{font:500 14px var(--disp);color:var(--ink3);letter-spacing:.12em}
   .s-head .rk{font:600 11.5px var(--disp);letter-spacing:.2em;color:var(--tone)}
   .gl{font:500 11.5px var(--sans);letter-spacing:.06em;color:var(--open);border:1px solid var(--open);border-radius:999px;padding:1px 9px;white-space:nowrap}
+  .gl.warn{color:var(--shut);border-color:var(--shut)}
+  .mdrop{display:inline-flex;margin-left:6px;color:var(--shut);vertical-align:-1px}
+  .mdrop .li{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;margin:0}
   .cgrid{display:grid;gap:30px}
   @media (min-width:980px){ .cgrid{grid-template-columns:5fr 6fr;gap:64px} .stock.flip .cgrid>div:first-child{order:2} }
   .price{display:flex;align-items:flex-end;gap:22px;flex-wrap:wrap}
@@ -600,6 +603,7 @@ const GLOSSARY = {
   val_cheap:"估值便宜度：這檔的估值（本益比，或虧損過的股票用股價淨值比），站在它自己比較區間的高低位置。越低（越接近自己的便宜區）分數越高（＝100 − 位階）。回答「相對它自己，現在便宜還貴」。比較區間預設近 5 年。",
   fund:"基本面：公司賺不賺錢、在成長還衰退。用最新月營收年增率（YoY）換算，成長越猛分數越高。單月有雜訊，想看趨勢就點「營收動能」看歷年圖。",
   goodline:"好公司打折線：財務指紋 ≥80 的好公司，位階 ≤60% 就亮這個標籤。<br><br>為什麼不等 ≤30%：2026-10 用清單裡指紋 ≥80 的 6 檔回測（2013 起每天進場、看一年後）——位階 ≤30% 買，一年後中位數 +25%、跌超過 20% 的機率 9%；45～60% 買是 +22%、6%，結果差不多，但能進場的日子多一倍（約 44% 對 21%）。好公司很少真的跌到 ≤30%，死等會一直錯過。<br><i class='ic ic-warn'></i> 只是標籤，<b>不改進場時機分數</b>（歷史回測照舊可比）。回測的 6 檔是「現在看來」的好公司＝事後挑的贏家，結果偏樂觀；指紋掉到 80 以下，標籤自動消失。",
+  margindrop:"獲利率下滑：最新一季的<b>營益率</b>比去年同一季，相對下滑 15% 以上就亮。<br><br>營益率＝本業每賣 100 元能賺幾元（扣掉成本，也扣掉研發、業務、管理費用；不含業外）。用「相對」變化：廣達 3.7%→2.9% 只少 0.8 個百分點，但等於本業少賺了五分之一。<br><br>為什麼要看：營收在衝、本益比又低，分數就會很高——但如果每賣一塊錢賺得越來越少，股價跌、本益比變低，可能正是市場在反映這件事，不是撿到便宜。<br><i class='ic ic-warn'></i> 只是標籤，<b>不改進場時機分數</b>（2026-11-13 試算過把它算進分數：會誤扣獲利率持平的股票，影響又太小）。門檻 15% 沒有回測過；一季才更新一次。",
   quality:"財務指紋（品質）：這是不是一門「好生意」——用近幾完整年的 ROE（股東權益報酬率）＋毛利率水準與穩定度＋營益率算，滿分 100。跟「基本面」互補：基本面看『營收現在衝不衝』（短期動能），品質看『賺錢賺得久不久、穩不穩』（長期體質）。<i class='ic ic-warn'></i> 刻意不併入進場時機——它回答『該不該擁有』，不是『現在時機好不好』。",
   per:"PER（本益比）：股價 ÷ 每股盈餘。買一塊錢的獲利要付幾塊，數字越大＝買得越貴。",
   pbr:"PBR（股價淨值比）：股價 ÷ 每股淨值。買一塊錢的資產要付幾塊，數字越大＝買得越貴。<br><br>這檔改用 PBR，是因為它<b>虧損過</b>——公司虧錢時沒有本益比（分母是負的或趨近 0），那段日子的 PER 在資料裡是空的。如果照樣用 PER 算位階，等於「只跟有賺錢的那半個循環比」，會把景氣頂部誤讀成便宜。淨值不會消失，所以改用 PBR。",
@@ -1482,6 +1486,7 @@ const LI_P={
   score:'<path d="M4 17a8 8 0 1 1 16 0"/><path d="M12 17l4-5"/>',
   val:'<path d="M3 18h18"/><path d="M12 18V9"/><circle cx="12" cy="6" r="2.5"/>',
   trig:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/>',
+  drop:'<path d="M3 7l6 6 4-4 8 8"/><path d="M21 11v6h-6"/>',
   good:'<path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6l-5.4 2.9 1.2-6-4.5-4.2 6.1-.7z"/>',
   thesis:'<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13 7l4 4"/>',
 };
@@ -1768,17 +1773,20 @@ function detailHTML(s, prevScore){
         <div class="pewhy" style="border:0;padding:0">假設其他條件不變。</div></div>`:""}
       ${isGood(s)?`<div class="blk"><span class="lbl">${li("good")}Good ·${term("goodline","好公司打折線")}</span>
         <div class="dline">指紋 <b>${q.score}</b>、位階 <b>${s.metric_pctl}%</b> ≤ 60%——對好公司來說已經算打折，可以考慮分批。</div></div>`:""}
+      ${isDrop(s)?`<div class="blk"><span class="lbl">${li("drop")}Margin ·${term("margindrop","獲利率下滑")}</span>
+        <div class="dline">${esc(s.margin.q)} 營益率 <b>${s.margin.om}%</b>，去年同季 ${s.margin.om_ly}%（相對 <b>${s.margin.rel}%</b>）；毛利率 ${s.margin.gm_ly}% → ${s.margin.gm}%。分數高可能只是股價跌、本益比變低，先確認是不是生意在變差。</div></div>`:""}
       <div class="blk"><span class="lbl">${li("thesis")}Thesis · 論點</span>${thesisHTML2(s)}${actsHTML(s)}</div>
     </div></div>`;
 }
 function headHTML(s, rank){
-  return `<div class="s-head">${rank?`<span class="rk">No.${String(rank).padStart(2,"0")}</span>`:""}<h3>${s.name||s.code}</h3><span class="code">${s.code}</span>${isGood(s)?`<span class="gl">好公司打折線</span>`:""}</div>`;
+  return `<div class="s-head">${rank?`<span class="rk">No.${String(rank).padStart(2,"0")}</span>`:""}<h3>${s.name||s.code}</h3><span class="code">${s.code}</span>${isGood(s)?`<span class="gl">好公司打折線</span>`:""}${isDrop(s)?`<span class="gl warn">獲利率下滑</span>`:""}</div>`;
 }
+function isDrop(s){ return !!(s.margin && s.margin.drop); }
 const CHEV=`<svg class="c-ch" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>`;
 function rowHTML(x){
   const s=x.v, dream=s.composite==null, c=priceChg(s.spark);
   return `<details class="row" id="s-${s.code}" data-code="${s.code}"><summary>
-    <span class="nm">${s.name||""}<small>${s.code}</small></span>
+    <span class="nm">${s.name||""}<small>${s.code}</small>${isDrop(s)?`<span class="mdrop" title="獲利率下滑（點開看細節）">${li("drop")}</span>`:""}</span>
     <span class="c-sc ${dream?"dream":""}">${dream?(s.data_warn?"資料異常":"不評分"):s.composite+deltaHTML(s.composite,prevOf(window.DATA,x.raw))}</span>
     <span class="c-gp">${dream?"":"−"+(LINE-s.composite)}</span>
     <span class="c-pe">${s.metric_pctl!=null?`<i style="left:${Math.max(3,Math.min(97,s.metric_pctl))}%"></i><em>${s.metric_pctl}%</em>`:""}</span>
