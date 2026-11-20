@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-11-20T05:32:50+00:00",
+  "generated_at": "2026-11-20T06:07:19+00:00",
   "market": {
     "score": 91,
     "tag": "極度恐慌(罕見)",
-    "close": 35878,
-    "bias": -20.8,
-    "dd": -28.0,
-    "vol": 48.3,
+    "close": 36033,
+    "bias": -20.4,
+    "dd": -27.7,
+    "vol": 47.7,
     "date": "2026-11-20",
     "margin_note": "融資餘額 4844 億 · 近一年位階 46%（3037–6533） · 近一月 -24%"
   },
@@ -364,10 +364,10 @@
     {
       "code": "6669",
       "name": "緯穎",
-      "price": 1320.0,
+      "price": 1325.0,
       "metric": "per",
-      "metric_val": 11.65,
-      "metric_pctl": 9,
+      "metric_val": 11.69,
+      "metric_pctl": 10,
       "metric_min": 5.0,
       "metric_median": 17.8,
       "metric_max": 38.5,
@@ -375,7 +375,7 @@
       "metric_cov": 100,
       "metric_n": 1212,
       "metric_since": null,
-      "val_cheap": 91,
+      "val_cheap": 90,
       "yoy": 80.9,
       "revenue_history": [
         {
@@ -624,7 +624,7 @@
         1450.0,
         1475.0,
         1410.0,
-        1320.0
+        1325.0
       ],
       "quality": {
         "score": 81,
@@ -649,8 +649,8 @@
       "label": "時機佳（便宜＋恐慌）",
       "alt": {
         "metric": "per",
-        "metric_val": 11.65,
-        "metric_pctl": 10,
+        "metric_val": 11.69,
+        "metric_pctl": 11,
         "metric_min": 5.0,
         "metric_median": 17.8,
         "metric_max": 38.5,
@@ -659,8 +659,8 @@
         "metric_n": 1863,
         "metric_since": "2019-03-01",
         "since_why": "上市起用全部歷史；AI帶來的是營收規模(5.5倍)不是營益率(4%→6~8%)，沒有新台階",
-        "val_cheap": 90,
-        "composite": 93,
+        "val_cheap": 89,
+        "composite": 92,
         "label": "時機佳（便宜＋恐慌）"
       },
       "thesis": "AI 伺服器液冷 ＋ 北美 CSP 大客戶 ODM 卡位，交期與整機驗證是門檻。",
@@ -673,10 +673,10 @@
     {
       "code": "2382",
       "name": "廣達",
-      "price": 251.5,
+      "price": 252.0,
       "metric": "per",
-      "metric_val": 10.26,
-      "metric_pctl": 16,
+      "metric_val": 10.28,
+      "metric_pctl": 17,
       "metric_min": 8.6,
       "metric_median": 15.9,
       "metric_max": 35.5,
@@ -684,7 +684,7 @@
       "metric_cov": 100,
       "metric_n": 1212,
       "metric_since": null,
-      "val_cheap": 84,
+      "val_cheap": 83,
       "yoy": 104.0,
       "revenue_history": [
         {
@@ -933,7 +933,7 @@
         262.5,
         265.0,
         262.5,
-        251.5
+        252.0
       ],
       "quality": {
         "score": 75,
@@ -958,7 +958,7 @@
       "label": "時機佳（便宜＋恐慌）",
       "alt": {
         "metric": "per",
-        "metric_val": 10.26,
+        "metric_val": 10.28,
         "metric_pctl": 2,
         "metric_min": 9.4,
         "metric_median": 16.9,
@@ -4326,10 +4326,10 @@
     {
       "code": "2303",
       "name": "聯電",
-      "price": 80.1,
+      "price": 80.3,
       "metric": "per",
-      "metric_val": 11.83,
-      "metric_pctl": 52,
+      "metric_val": 11.86,
+      "metric_pctl": 53,
       "metric_min": 5.8,
       "metric_median": 11.7,
       "metric_max": 44.9,
@@ -4337,7 +4337,7 @@
       "metric_cov": 100,
       "metric_n": 1212,
       "metric_since": null,
-      "val_cheap": 48,
+      "val_cheap": 47,
       "yoy": 18.3,
       "revenue_history": [
         {
@@ -4586,7 +4586,7 @@
         92.4,
         93.0,
         88.2,
-        80.1
+        80.3
       ],
       "quality": {
         "score": 70,
@@ -4607,7 +4607,7 @@
       },
       "per_fix": null,
       "fund": 67,
-      "composite": 68,
+      "composite": 67,
       "label": "時機佳（便宜＋恐慌）",
       "alt": null,
       "thesis": "<b>本業：成熟製程晶圓代工</b>——不跟台積電拚最先進，主力是 22／28 奈米（占營收 35%）、40、65 奈米，做的是驅動 IC、電源管理、Wi-Fi 這類晶片。<br>賭成熟製程從供過於求轉成漲價：2026Q3 產能利用率 92%（Q2 85%）、毛利率 34%、營益率 25.1%，公司預期 2027 年平均售價年增約一成。<br>⚠ <b>本益比被墊低</b>：Q2 單季 EPS 3.39，前後兩季只有 1.29 和 1.32，營益率卻沒有同步跳，推算主要是業外。卡片上 13.5 倍含這一筆；用近兩季的獲利水準粗估約 17～18 倍。<br>⚠ Q3 毛利率落在公司指引 34%～36% 的下緣；又追加約 32 億美元資本支出擴新加坡、泰國廠，之後折舊會加重。<br><i>2026-11-06 AI 起草，你自己的持有理由請確認後改寫。</i>",
@@ -5205,10 +5205,10 @@
     {
       "code": "8069",
       "name": "元太",
-      "price": 122.5,
+      "price": 124.5,
       "metric": "per",
-      "metric_val": 13.75,
-      "metric_pctl": 0,
+      "metric_val": 13.97,
+      "metric_pctl": 1,
       "metric_min": 13.7,
       "metric_median": 25.9,
       "metric_max": 52.3,
@@ -5216,7 +5216,7 @@
       "metric_cov": 100,
       "metric_n": 1212,
       "metric_since": null,
-      "val_cheap": 100,
+      "val_cheap": 99,
       "yoy": 74.4,
       "revenue_history": [
         {
@@ -5465,7 +5465,7 @@
         139.0,
         140.5,
         132.5,
-        122.5
+        124.5
       ],
       "quality": {
         "score": 72,
@@ -5486,7 +5486,7 @@
       },
       "per_fix": null,
       "fund": 100,
-      "composite": 97,
+      "composite": 96,
       "label": "時機佳（便宜＋恐慌）",
       "alt": null,
       "thesis": "<b>本業：電子紙</b>（全球主要的電子紙模組供應商）——電子貨架標籤（ESL）、閱讀器、電子看板。高毛利、掌握材料專利，是這個利基市場的主導者。<br>賭 ESL 與彩色電子紙持續滲透，加上大尺寸看板打開新用途。2026Q2 營收 102 億、毛利率 58.7%、營益率 34.7%、單季 EPS 3.23。<br>⚠ <b>位階 0% 不等於撿到便宜</b>：本益比是近 5 年最低，但 2026 上半年營收 188.5 億，跟 2025 上半年 186.9 億幾乎持平，7 月月營收還年減 26%。市場可能是在懷疑成長，不是忘了它。先搞清楚為什麼沒人要，再談便宜。<br>⚠ 單季起伏大：2025Q4 營益率掉到 9.8%，隔季又回到 32.6%。ESL 的成長數字我只查到 2024 年以前的舊報導，2026 年現況還沒查到。<br><i>2026-11-06 AI 起草，你自己的持有理由請確認後改寫。</i>",
@@ -6967,7 +6967,7 @@
     "market": 0.35
   },
   "intraday": {
-    "time": "13:30"
+    "time": "13:33"
   },
   "disclaimer": "溫度計不是買賣訊號。沒有模型能可靠擇時；它只給情境傾向。非投資建議，決策與風險自負。"
 }
