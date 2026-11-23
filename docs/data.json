@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-23T06:07:06+00:00",
+  "generated_at": "2026-11-23T21:54:07+00:00",
   "market": {
     "score": 90,
     "tag": "極度恐慌(罕見)",
@@ -8,7 +8,7 @@
     "dd": -26.1,
     "vol": 49.1,
     "date": "2026-11-23",
-    "margin_note": "融資餘額 4352 億 · 近一年位階 41%（3037–6533） · 近一月 -32%"
+    "margin_note": "融資餘額 4338 億 · 近一年位階 40%（3064–6533） · 近一月 -32%"
   },
   "prev": {
     "date": "2026-11-20",
@@ -58,7 +58,7 @@
       "name": "台積電",
       "price": 2030.0,
       "metric": "per",
-      "metric_val": 20.67,
+      "metric_val": 20.66,
       "metric_pctl": 39,
       "metric_min": 12.5,
       "metric_median": 23.3,
@@ -341,7 +341,7 @@
       "label": "時機佳（便宜＋恐慌）",
       "alt": {
         "metric": "per",
-        "metric_val": 20.67,
+        "metric_val": 20.66,
         "metric_pctl": 9,
         "metric_min": 17.4,
         "metric_median": 27.1,
@@ -675,7 +675,7 @@
       "name": "廣達",
       "price": 257.0,
       "metric": "per",
-      "metric_val": 10.48,
+      "metric_val": 10.49,
       "metric_pctl": 20,
       "metric_min": 8.6,
       "metric_median": 15.9,
@@ -958,7 +958,7 @@
       "label": "時機佳（便宜＋恐慌）",
       "alt": {
         "metric": "per",
-        "metric_val": 10.48,
+        "metric_val": 10.49,
         "metric_pctl": 3,
         "metric_min": 9.4,
         "metric_median": 16.9,
@@ -983,7 +983,7 @@
       "name": "欣興",
       "price": 558.0,
       "metric": "per",
-      "metric_val": 28.89,
+      "metric_val": 28.88,
       "metric_pctl": 60,
       "metric_min": 6.4,
       "metric_median": 26.6,
@@ -1266,7 +1266,7 @@
       "label": "時機佳（便宜＋恐慌）",
       "alt": {
         "metric": "per",
-        "metric_val": 28.89,
+        "metric_val": 28.88,
         "metric_pctl": 62,
         "metric_min": 6.4,
         "metric_median": 25.1,
@@ -3434,7 +3434,7 @@
       "name": "德律",
       "price": 210.5,
       "metric": "per",
-      "metric_val": 15.27,
+      "metric_val": 15.26,
       "metric_pctl": 48,
       "metric_min": 7.6,
       "metric_median": 15.6,
@@ -4621,7 +4621,7 @@
       "name": "穩懋",
       "price": 408.5,
       "metric": "pbr",
-      "metric_val": 3.83,
+      "metric_val": 3.82,
       "metric_pctl": 84,
       "metric_min": 0.83,
       "metric_median": 1.99,
@@ -4914,7 +4914,7 @@
       "name": "奇鋐",
       "price": 2365.0,
       "metric": "per",
-      "metric_val": 26.15,
+      "metric_val": 26.14,
       "metric_pctl": 42,
       "metric_min": 9.3,
       "metric_median": 29.1,
@@ -6966,8 +6966,6 @@
     "fund": 0.25,
     "market": 0.35
   },
-  "intraday": {
-    "time": "13:33"
-  },
+  "intraday": null,
   "disclaimer": "溫度計不是買賣訊號。沒有模型能可靠擇時；它只給情境傾向。非投資建議，決策與風險自負。"
 }
