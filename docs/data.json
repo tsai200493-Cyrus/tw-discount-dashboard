@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-11-24T02:02:23+00:00",
+  "generated_at": "2026-11-24T02:32:43+00:00",
   "market": {
     "score": 79,
     "tag": "恐慌(機會)",
-    "close": 40138,
+    "close": 40141,
     "bias": -11.2,
     "dd": -19.4,
     "vol": 60.3,
@@ -673,10 +673,10 @@
     {
       "code": "2382",
       "name": "廣達",
-      "price": 277.0,
+      "price": 278.5,
       "metric": "per",
-      "metric_val": 11.31,
-      "metric_pctl": 27,
+      "metric_val": 11.37,
+      "metric_pctl": 28,
       "metric_min": 8.6,
       "metric_median": 15.9,
       "metric_max": 35.5,
@@ -684,7 +684,7 @@
       "metric_cov": 100,
       "metric_n": 1211,
       "metric_since": null,
-      "val_cheap": 73,
+      "val_cheap": 72,
       "yoy": 104.0,
       "revenue_history": [
         {
@@ -933,7 +933,7 @@
         262.5,
         252.0,
         257.0,
-        277.0
+        278.5
       ],
       "quality": {
         "score": 75,
@@ -954,12 +954,12 @@
       },
       "per_fix": null,
       "fund": 100,
-      "composite": 82,
+      "composite": 81,
       "label": "時機佳（便宜＋恐慌）",
       "alt": {
         "metric": "per",
-        "metric_val": 11.31,
-        "metric_pctl": 6,
+        "metric_val": 11.37,
+        "metric_pctl": 7,
         "metric_min": 9.4,
         "metric_median": 16.8,
         "metric_max": 35.5,
@@ -968,7 +968,7 @@
         "metric_n": 939,
         "metric_since": "2023-01-01",
         "since_why": "成長主軸從NB轉AI伺服器，營益率1.8%→4.4%",
-        "val_cheap": 94,
+        "val_cheap": 93,
         "composite": 90,
         "label": "時機佳（便宜＋恐慌）"
       },
@@ -5205,10 +5205,10 @@
     {
       "code": "8069",
       "name": "元太",
-      "price": 126.0,
+      "price": 123.5,
       "metric": "per",
-      "metric_val": 14.14,
-      "metric_pctl": 2,
+      "metric_val": 13.86,
+      "metric_pctl": 1,
       "metric_min": 13.6,
       "metric_median": 25.9,
       "metric_max": 52.3,
@@ -5216,7 +5216,7 @@
       "metric_cov": 100,
       "metric_n": 1211,
       "metric_since": null,
-      "val_cheap": 98,
+      "val_cheap": 99,
       "yoy": 74.4,
       "revenue_history": [
         {
@@ -5465,7 +5465,7 @@
         132.5,
         124.5,
         121.0,
-        126.0
+        123.5
       ],
       "quality": {
         "score": 72,
@@ -6967,7 +6967,7 @@
     "market": 0.35
   },
   "intraday": {
-    "time": "10:00"
+    "time": "10:30"
   },
   "disclaimer": "溫度計不是買賣訊號。沒有模型能可靠擇時；它只給情境傾向。非投資建議，決策與風險自負。"
 }
