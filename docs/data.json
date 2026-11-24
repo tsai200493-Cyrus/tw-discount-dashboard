@@ -1,10 +1,10 @@
 {
-  "generated_at": "2026-11-24T04:31:59+00:00",
+  "generated_at": "2026-11-24T05:02:20+00:00",
   "market": {
     "score": 79,
     "tag": "恐慌(機會)",
-    "close": 40146,
-    "bias": -11.2,
+    "close": 40149,
+    "bias": -11.1,
     "dd": -19.4,
     "vol": 60.3,
     "date": "2026-11-24",
@@ -673,9 +673,9 @@
     {
       "code": "2382",
       "name": "廣達",
-      "price": 282.0,
+      "price": 282.5,
       "metric": "per",
-      "metric_val": 11.51,
+      "metric_val": 11.53,
       "metric_pctl": 28,
       "metric_min": 8.6,
       "metric_median": 15.9,
@@ -933,7 +933,7 @@
         262.5,
         252.0,
         257.0,
-        282.0
+        282.5
       ],
       "quality": {
         "score": 75,
@@ -958,7 +958,7 @@
       "label": "時機佳（便宜＋恐慌）",
       "alt": {
         "metric": "per",
-        "metric_val": 11.51,
+        "metric_val": 11.53,
         "metric_pctl": 7,
         "metric_min": 9.4,
         "metric_median": 16.8,
@@ -5791,9 +5791,9 @@
     {
       "code": "1513",
       "name": "中興電",
-      "price": 142.5,
+      "price": 141.5,
       "metric": "per",
-      "metric_val": 15.49,
+      "metric_val": 15.38,
       "metric_pctl": 24,
       "metric_min": 8.8,
       "metric_median": 20.3,
@@ -6051,7 +6051,7 @@
         138.5,
         127.5,
         132.5,
-        142.5
+        141.5
       ],
       "quality": {
         "score": 73,
@@ -6967,7 +6967,7 @@
     "market": 0.35
   },
   "intraday": {
-    "time": "12:30"
+    "time": "13:00"
   },
   "disclaimer": "溫度計不是買賣訊號。沒有模型能可靠擇時；它只給情境傾向。非投資建議，決策與風險自負。"
 }
