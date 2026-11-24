@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-24T06:08:37+00:00",
+  "generated_at": "2026-11-24T20:30:24+00:00",
   "market": {
     "score": 79,
     "tag": "恐慌(機會)",
@@ -8,7 +8,7 @@
     "dd": -19.5,
     "vol": 60.2,
     "date": "2026-11-24",
-    "margin_note": "融資餘額 4338 億 · 近一年位階 40%（3064–6533） · 近一月 -32%"
+    "margin_note": "融資餘額 4535 億 · 近一年位階 42%（3064–6533） · 近一月 -28%"
   },
   "prev": {
     "date": "2026-11-23",
@@ -1291,7 +1291,7 @@
       "name": "群創",
       "price": 33.25,
       "metric": "pbr",
-      "metric_val": 1.13,
+      "metric_val": 1.14,
       "metric_pctl": 89,
       "metric_min": 0.35,
       "metric_median": 0.55,
@@ -1574,7 +1574,7 @@
       "label": "時機差（貴＋貪婪）",
       "alt": {
         "metric": "pbr",
-        "metric_val": 1.13,
+        "metric_val": 1.14,
         "metric_pctl": 95,
         "metric_min": 0.2,
         "metric_median": 0.53,
@@ -3142,7 +3142,7 @@
       "price": 1015.0,
       "metric": "per",
       "metric_val": 25.02,
-      "metric_pctl": 46,
+      "metric_pctl": 47,
       "metric_min": 13.6,
       "metric_median": 25.8,
       "metric_max": 88.4,
@@ -3150,7 +3150,7 @@
       "metric_cov": 100,
       "metric_n": 1211,
       "metric_since": null,
-      "val_cheap": 54,
+      "val_cheap": 53,
       "yoy": 163.3,
       "revenue_history": [
         {
@@ -3434,7 +3434,7 @@
       "name": "德律",
       "price": 231.5,
       "metric": "per",
-      "metric_val": 16.78,
+      "metric_val": 16.79,
       "metric_pctl": 54,
       "metric_min": 7.6,
       "metric_median": 15.6,
@@ -6966,8 +6966,6 @@
     "fund": 0.25,
     "market": 0.35
   },
-  "intraday": {
-    "time": "13:33"
-  },
+  "intraday": null,
   "disclaimer": "溫度計不是買賣訊號。沒有模型能可靠擇時；它只給情境傾向。非投資建議，決策與風險自負。"
 }
