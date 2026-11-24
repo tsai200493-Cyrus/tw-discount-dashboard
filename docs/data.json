@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-11-24T05:32:14+00:00",
+  "generated_at": "2026-11-24T06:08:37+00:00",
   "market": {
     "score": 79,
     "tag": "恐慌(機會)",
-    "close": 40121,
+    "close": 40122,
     "bias": -11.2,
     "dd": -19.5,
     "vol": 60.2,
@@ -5205,9 +5205,9 @@
     {
       "code": "8069",
       "name": "元太",
-      "price": 129.5,
+      "price": 129.0,
       "metric": "per",
-      "metric_val": 14.53,
+      "metric_val": 14.48,
       "metric_pctl": 3,
       "metric_min": 13.6,
       "metric_median": 25.9,
@@ -5465,7 +5465,7 @@
         132.5,
         124.5,
         121.0,
-        129.5
+        129.0
       ],
       "quality": {
         "score": 72,
@@ -5791,9 +5791,9 @@
     {
       "code": "1513",
       "name": "中興電",
-      "price": 141.0,
+      "price": 140.5,
       "metric": "per",
-      "metric_val": 15.32,
+      "metric_val": 15.27,
       "metric_pctl": 24,
       "metric_min": 8.8,
       "metric_median": 20.3,
@@ -6051,7 +6051,7 @@
         138.5,
         127.5,
         132.5,
-        141.0
+        140.5
       ],
       "quality": {
         "score": 73,
@@ -6967,7 +6967,7 @@
     "market": 0.35
   },
   "intraday": {
-    "time": "13:30"
+    "time": "13:33"
   },
   "disclaimer": "溫度計不是買賣訊號。沒有模型能可靠擇時；它只給情境傾向。非投資建議，決策與風險自負。"
 }
